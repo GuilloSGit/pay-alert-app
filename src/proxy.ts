@@ -3,17 +3,20 @@ import type { NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register']
 
+// En Next.js 16 el archivo de middleware se llama proxy.ts y exporta `proxy`.
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const token = request.cookies.get('pa_access_token')?.value
+  // pa_session=1 es un indicador no sensible seteado por el FE al hacer login.
+  // La seguridad real la provee la httpOnly cookie `refresh_token` del backend.
+  const hasSession = request.cookies.has('pa_session')
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
 
-  if (!token && !isPublic) {
+  if (!hasSession && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (token && isPublic) {
+  if (hasSession && isPublic) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

@@ -1,6 +1,8 @@
-import { getAccessToken, clearSession } from './auth'
+import { getAccessToken, setAccessToken, clearSession } from './auth'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+// Las requests van a rutas relativas → Next.js rewrites las proxea al backend (API_URL).
+// Nunca hardcodear una URL absoluta acá; eso rompería el proxy en Docker.
+const BASE_URL = ''
 
 type FetchOptions = RequestInit & {
   skipAuth?: boolean
@@ -17,7 +19,22 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
+async function tryRefresh(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include', // manda la httpOnly cookie refresh_token al backend
+    })
+    if (!res.ok) return false
+    const body = (await res.json()) as { data: { accessToken: string } }
+    setAccessToken(body.data.accessToken)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function request<T>(path: string, options: FetchOptions = {}, isRetry = false): Promise<T> {
   const { skipAuth, ...fetchOptions } = options
 
   const headers: Record<string, string> = {
@@ -30,7 +47,19 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     if (token) headers['Authorization'] = `Bearer ${token}`
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...fetchOptions, headers })
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...fetchOptions,
+    headers,
+    credentials: 'include',
+  })
+
+  if (res.status === 401 && !skipAuth && !isRetry) {
+    const refreshed = await tryRefresh()
+    if (refreshed) return request<T>(path, options, true)
+    clearSession()
+    if (typeof window !== 'undefined') window.location.href = '/login'
+    throw new ApiError(401, 'UNAUTHORIZED', 'Sesión expirada')
+  }
 
   if (res.status === 401) {
     clearSession()
@@ -44,7 +73,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     throw new ApiError(res.status, body.code ?? 'UNKNOWN_ERROR', body.error ?? 'Error desconocido')
   }
 
-  return body
+  return body as T
 }
 
 export const api = {
