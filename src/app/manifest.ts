@@ -12,6 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'es-AR',
     icons: [
       // Generado dinámicamente por src/app/icon.tsx (campana verde)
+      // Chrome requiere 'any' para mostrar el botón de instalación PWA
+      { src: '/icon', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   }
