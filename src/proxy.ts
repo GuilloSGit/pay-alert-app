@@ -10,6 +10,9 @@ export function proxy(request: NextRequest) {
   // La seguridad real la provee la httpOnly cookie `refresh_token` del backend.
   const hasSession = request.cookies.has('pa_session')
 
+  // La raíz es la landing page pública — siempre accesible.
+  if (pathname === '/') return NextResponse.next()
+
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
 
   if (!hasSession && !isPublic) {
@@ -24,5 +27,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|favicon\\.svg|icon\\.svg|manifest\\.webmanifest|opengraph-image|assets|api).*)'],
 }
