@@ -1,8 +1,6 @@
 import { getAccessToken, setAccessToken, clearSession } from './auth'
 
-// Las requests van a rutas relativas → Next.js rewrites las proxea al backend (API_URL).
-// Nunca hardcodear una URL absoluta acá; eso rompería el proxy en Docker.
-const BASE_URL = ''
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 type FetchOptions = RequestInit & {
   skipAuth?: boolean

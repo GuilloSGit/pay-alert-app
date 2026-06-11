@@ -10,7 +10,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# API_URL se puede dejar vacío en build — los rewrites leen la env var en runtime
+# NEXT_PUBLIC_API_URL se bakea en el bundle del cliente en build time.
+# Pasalo como build arg: docker build --build-arg NEXT_PUBLIC_API_URL=http://...
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 # ─── Stage 3: runner (solo lo necesario para producción) ──────────────────────
