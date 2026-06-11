@@ -59,4 +59,46 @@ La página solo aparece en el sidebar cuando `exists: true` Y el rol del usuario
 ### `output: 'standalone'` requerido para Docker
 `next.config.ts` debe tener `output: 'standalone'` para que el Dockerfile multi-stage
 copie solo `.next/standalone/` en la imagen final (runner stage).
+
+### Íconos y OG image — generación dinámica (edge runtime)
+
+No hay assets estáticos PNG/ICO en este proyecto. Todo se genera vía ImageResponse:
+
+| Archivo | Dimensiones | Propósito |
+|---------|------------|-----------|
+| `src/app/icon.tsx` | 512×512 | Tab del browser, PWA launcher, share sheet |
+| `src/app/apple-icon.tsx` | 180×180 | Apple touch icon (iOS add to homescreen) |
+| `src/app/opengraph-image.tsx` | 1200×630 | OG/Twitter card |
+
+Todos usan `export const runtime = 'edge'` y `export const contentType = 'image/png'`.
+Next.js app directory los registra automáticamente en los `<link>` del `<head>`.
+No agregar entradas manuales en `src/app/layout.tsx` — se duplicarían.
+
+### PWA manifest y el install prompt de Chrome
+`src/app/manifest.ts` debe incluir al menos un ícono con `purpose: 'any'`.
+Chrome no muestra el botón de instalación si solo existe `purpose: 'maskable'`.
+
+```ts
+icons: [
+  { src: '/icon', sizes: '192x192', type: 'image/png', purpose: 'any' },      // ← requerido
+  { src: '/icon', sizes: '512x512', type: 'image/png', purpose: 'maskable' }, // ← splash screens
+],
+```
+
+### proxy.ts matcher — qué excluir
+El matcher de `src/proxy.ts` debe excluir todos los endpoints que generan assets:
+
+```ts
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|icon|apple-icon|manifest\\.webmanifest|opengraph-image|assets|api).*)'],
+}
+```
+
+Si se agrega un nuevo endpoint de asset, agregarlo aquí o el middleware lo
+redirigirá a `/login` cuando el usuario no tenga sesión.
+
+### `public/` no puede estar vacío
+Git no trackea directorios vacíos. Si se eliminan todos los archivos de `public/`,
+el directorio desaparece y el `COPY public/ /app/public/` del Dockerfile falla.
+Solución: mantener `public/.gitkeep` siempre en el repo.
 <!-- END:nextjs-agent-rules -->

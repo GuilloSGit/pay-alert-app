@@ -1,7 +1,7 @@
 # Pay Alert — Frontend
 
-Dashboard web para [Pay Alert](https://pay-alert.com.ar): plataforma SaaS que centraliza
-notificaciones de pagos de Mercado Pago en tiempo real.
+Landing page y dashboard web para [Pay Alert](https://pay-alert.com.ar): plataforma SaaS
+que centraliza notificaciones de pagos de Mercado Pago en tiempo real.
 
 ## Stack
 
@@ -62,6 +62,20 @@ src/
 1. Crear `src/app/(dashboard)/mi-ruta/page.tsx`
 2. En `src/components/layout/Sidebar.tsx` → `NAV_ITEMS` → cambiar `exists: false` a `exists: true`
 3. Verificar que `roles` incluya los roles correctos
+
+## Estructura relevante — íconos y OG image
+
+No hay assets estáticos PNG/ICO. Todos los íconos se generan dinámicamente:
+
+| Archivo | Propósito |
+|---------|-----------|
+| `src/app/icon.tsx` | Ícono del tab, PWA, share sheet (512×512, edge runtime) |
+| `src/app/apple-icon.tsx` | Apple touch icon para iOS (180×180) |
+| `src/app/opengraph-image.tsx` | OG/Twitter card (1200×630) |
+| `src/app/manifest.ts` | PWA manifest (íconos apuntan a `/icon`) |
+
+El manifest requiere un ícono con `purpose: 'any'` para que Chrome muestre el botón
+de instalación. Ver `AGENTS.md` para más detalles.
 
 ## Deploy en Render
 
