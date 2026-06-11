@@ -4,6 +4,8 @@ export interface User {
   name: string
 }
 
+export type BusinessRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'OBSERVER'
+
 export interface Business {
   id: string
   name: string
@@ -12,6 +14,11 @@ export interface Business {
   slug: string
   createdAt: string
   updatedAt: string
+}
+
+// GET /api/v1/businesses devuelve Business + role del usuario en ese comercio
+export interface BusinessMembership extends Business {
+  role: BusinessRole
 }
 
 export interface Payment {
