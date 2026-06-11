@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pay Alert — Frontend
 
-## Getting Started
+Dashboard web para [Pay Alert](https://pay-alert.com.ar): plataforma SaaS que centraliza
+notificaciones de pagos de Mercado Pago en tiempo real.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 + React 19 + TypeScript
+- Tailwind CSS 4
+- Deploy: Render
+
+## Setup local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
+# completar NEXT_PUBLIC_API_URL con la URL del backend
+
+npm install
+npm run dev   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+El backend debe estar corriendo en `NEXT_PUBLIC_API_URL` (default: `http://localhost:3001`).
+Ver `pay-alert-api/` para levantarlo.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup con Docker (stack completo)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd ../pay-alert-api
+docker-compose --env-file .env.docker up --build
+```
 
-## Learn More
+Levanta Postgres, Redis, API, Worker y este FE juntos.
+Ver `pay-alert-api/docker-compose.yml` para detalles.
 
-To learn more about Next.js, take a look at the following resources:
+## Variables de entorno
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | URL del backend (build-time) | `http://localhost:3001` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+En producción (Render), configurar `NEXT_PUBLIC_API_URL` como env var de **build**,
+no de runtime.
 
-## Deploy on Vercel
+## Estructura relevante
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/
+│   ├── (auth)/          # login, register
+│   └── (dashboard)/     # páginas protegidas
+├── components/layout/
+│   ├── DashboardShell.tsx  # fetcha rol del usuario, pasa al Sidebar
+│   └── Sidebar.tsx         # filtrado por rol y existencia de página
+├── lib/
+│   ├── api.ts           # cliente HTTP con refresh automático
+│   └── auth.ts          # token en memoria, pa_session cookie
+└── proxy.ts             # middleware de rutas (Next.js 16: proxy.ts, no middleware.ts)
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Agregar una nueva página al dashboard
+
+1. Crear `src/app/(dashboard)/mi-ruta/page.tsx`
+2. En `src/components/layout/Sidebar.tsx` → `NAV_ITEMS` → cambiar `exists: false` a `exists: true`
+3. Verificar que `roles` incluya los roles correctos
+
+## Deploy en Render
+
+Render necesita `NEXT_PUBLIC_API_URL` como variable de entorno de build (no runtime).
+El backend necesita la URL del FE en su variable `ALLOWED_ORIGINS`.
