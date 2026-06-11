@@ -24,18 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['/opengraph-image'],
   },
-  icons: {
-    icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/assets/icon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/assets/icon-96x96.png', sizes: '96x96', type: 'image/png' },
-    ],
-    apple: [{ url: '/assets/icon-180x180.png', sizes: '180x180', type: 'image/png' }],
-    other: [
-      { rel: 'icon', url: '/assets/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { rel: 'icon', url: '/assets/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-    ],
-  },
+  // icon.tsx y apple-icon.tsx en el app directory generan los link tags automáticamente
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
