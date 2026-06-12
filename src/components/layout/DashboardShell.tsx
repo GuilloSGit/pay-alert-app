@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { api } from '@/lib/api'
@@ -82,13 +83,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [isReplacingDevice, setIsReplacingDevice] = useState(false)
 
   const [toasts, setToasts] = useState<PaymentToast[]>([])
+  const queryClient = useQueryClient()
 
   const handleWsMessage = useCallback((msg: WsPaymentMessage) => {
     setToasts((prev) => {
       const next = [...prev, { id: ++toastCounter, msg }]
       return next.length > 3 ? next.slice(next.length - 3) : next
     })
-  }, [])
+    queryClient.invalidateQueries({ queryKey: ['summary'] })
+    queryClient.invalidateQueries({ queryKey: ['payments'] })
+  }, [queryClient])
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))

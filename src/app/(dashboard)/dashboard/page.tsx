@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { Header } from '@/components/layout/Header'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { api } from '@/lib/api'
@@ -66,19 +66,15 @@ function formatDate(dateStr: string | null | undefined) {
 
 export default function DashboardPage() {
   const { businessId, role } = useActiveBusiness()
-  const [summary, setSummary] = useState<DashboardSummary | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ['summary', businessId],
+    queryFn: () =>
+      api.get<SummaryResponse>(`/api/v1/businesses/${businessId}/summary`).then((r) => r.data),
+    enabled: !!businessId,
+  })
 
   const isManager = role === 'OWNER' || role === 'ADMIN'
-
-  useEffect(() => {
-    if (!businessId) return
-    api
-      .get<SummaryResponse>(`/api/v1/businesses/${businessId}/summary`)
-      .then((res) => setSummary(res.data))
-      .catch(() => {})
-      .finally(() => setIsLoading(false))
-  }, [businessId])
 
   const skeleton = (
     <div className="h-6 w-20 animate-pulse rounded bg-gray-200" />

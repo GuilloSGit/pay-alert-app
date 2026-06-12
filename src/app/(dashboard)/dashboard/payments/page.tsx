@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { api } from '@/lib/api'
@@ -242,15 +243,9 @@ function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
 export default function PaymentsPage() {
   const { businessId } = useActiveBusiness()
 
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [meta, setMeta] = useState<{ total: number; hasMore: boolean; nextCursor: string | null }>({
-    total: 0,
-    hasMore: false,
-    nextCursor: null,
-  })
-  const [isLoading, setIsLoading] = useState(true)
+  const [extraPayments, setExtraPayments] = useState<Payment[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const [status, setStatus] = useState<StatusFilter>('')
@@ -260,10 +255,8 @@ export default function PaymentsPage() {
   const [q, setQ] = useState('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const fetchPayments = useCallback(
-    async (cursor?: string) => {
-      if (!businessId) return
-
+  const buildParams = useCallback(
+    (cursor?: string) => {
       const params = new URLSearchParams({ limit: '20' })
       if (status) params.set('status', status)
       if (from) params.set('from', new Date(from).toISOString())
@@ -274,37 +267,48 @@ export default function PaymentsPage() {
       }
       if (q.trim()) params.set('q', q.trim())
       if (cursor) params.set('cursor', cursor)
-
-      const res = await api.get<PaymentsResponse & ApiResponse<Payment[]>>(
-        `/api/v1/businesses/${businessId}/payments?${params}`,
-      )
-      return res as unknown as PaymentsResponse
+      return params
     },
-    [businessId, status, from, to, q],
+    [status, from, to, q],
   )
 
+  const { data: baseData, isLoading, error: queryError } = useQuery({
+    queryKey: ['payments', businessId, status, from, to, q],
+    queryFn: () =>
+      api
+        .get<PaymentsResponse & ApiResponse<Payment[]>>(
+          `/api/v1/businesses/${businessId}/payments?${buildParams()}`,
+        )
+        .then((r) => r as unknown as PaymentsResponse),
+    enabled: !!businessId,
+  })
+
+  const error = queryError ? 'No se pudieron cargar los pagos. Intentá de nuevo.' : null
+
+  // Resetear páginas extra cuando cambian los filtros o llega un refresh del WS
   useEffect(() => {
-    if (!businessId) return
-    setIsLoading(true)
-    setError(null)
-    fetchPayments()
-      .then((res) => {
-        if (!res) return
-        setPayments(res.data)
-        setMeta(res.meta)
-      })
-      .catch(() => setError('No se pudieron cargar los pagos. Intentá de nuevo.'))
-      .finally(() => setIsLoading(false))
-  }, [businessId, fetchPayments])
+    setExtraPayments([])
+    setNextCursor(baseData?.meta.nextCursor ?? null)
+  }, [baseData])
+
+  const payments = [...(baseData?.data ?? []), ...extraPayments]
+  const meta = {
+    total: baseData?.meta.total ?? 0,
+    hasMore: !!nextCursor,
+    nextCursor,
+  }
 
   async function loadMore() {
-    if (!meta.nextCursor) return
+    if (!nextCursor || !businessId) return
     setIsLoadingMore(true)
     try {
-      const res = await fetchPayments(meta.nextCursor)
-      if (!res) return
-      setPayments((prev) => [...prev, ...res.data])
-      setMeta(res.meta)
+      const res = await api
+        .get<PaymentsResponse & ApiResponse<Payment[]>>(
+          `/api/v1/businesses/${businessId}/payments?${buildParams(nextCursor)}`,
+        )
+        .then((r) => r as unknown as PaymentsResponse)
+      setExtraPayments((prev) => [...prev, ...res.data])
+      setNextCursor(res.meta.nextCursor)
     } finally {
       setIsLoadingMore(false)
     }
