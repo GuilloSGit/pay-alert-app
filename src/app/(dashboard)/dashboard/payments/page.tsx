@@ -256,6 +256,7 @@ export default function PaymentsPage() {
   const [status, setStatus] = useState<StatusFilter>('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [q, setQ] = useState('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -310,7 +311,7 @@ export default function PaymentsPage() {
   }
 
   function handleSearchChange(value: string) {
-    setQ(value)
+    setSearchInput(value)
     if (searchTimer.current) clearTimeout(searchTimer.current)
     searchTimer.current = setTimeout(() => setQ(value), 400)
   }
@@ -319,6 +320,7 @@ export default function PaymentsPage() {
     setStatus('')
     setFrom('')
     setTo('')
+    setSearchInput('')
     setQ('')
   }
 
@@ -340,7 +342,7 @@ export default function PaymentsPage() {
               <input
                 type="text"
                 placeholder="Nombre, email, ID de MP..."
-                value={q}
+                value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-64 rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
               />
