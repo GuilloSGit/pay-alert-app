@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register']
+// Accessible with or without session — invitation links must work for both new and existing users
+const OPEN_PATHS = ['/invitations/']
 
 // En Next.js 16 el archivo de middleware se llama proxy.ts y exporta `proxy`.
 export function proxy(request: NextRequest) {
@@ -12,6 +14,8 @@ export function proxy(request: NextRequest) {
 
   // La raíz es la landing page pública — siempre accesible.
   if (pathname === '/') return NextResponse.next()
+
+  if (OPEN_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
 

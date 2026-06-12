@@ -102,3 +102,94 @@ Git no trackea directorios vacíos. Si se eliminan todos los archivos de `public
 el directorio desaparece y el `COPY public/ /app/public/` del Dockerfile falla.
 Solución: mantener `public/.gitkeep` siempre en el repo.
 <!-- END:nextjs-agent-rules -->
+
+---
+
+## Estado actual del proyecto
+
+### Páginas implementadas
+
+| Ruta | Archivo | Estado |
+|------|---------|--------|
+| `/` | `src/app/page.tsx` | ✅ Landing |
+| `/login` | `src/app/(auth)/login/page.tsx` | ✅ |
+| `/register` | `src/app/(auth)/register/page.tsx` | ✅ |
+| `/dashboard` | `src/app/(dashboard)/dashboard/page.tsx` | ✅ Stats + últimos pagos |
+| `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
+| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP, suscripción |
+| `/dashboard/members` | — | ⬜ pendiente |
+| `/dashboard/settings` | — | ⬜ pendiente |
+| `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
+
+### BusinessContext — patrón central de datos
+`DashboardShell` (`src/components/layout/DashboardShell.tsx`) hace `GET /businesses` al montar
+y expone `{ businessId, businessName, role }` via React Context a todas las páginas del dashboard.
+Las páginas consumen `useBusinessContext()` — no llaman a `/businesses` ellas mismas.
+
+**Limitación actual:** solo se usa `res.data[0]`. Multi-business selector es deuda técnica.
+
+### Backend que consume cada página
+
+| Página | Endpoints |
+|--------|-----------|
+| `/dashboard` | `GET /businesses/:id/summary` |
+| `/dashboard/payments` | `GET /businesses/:id/payments` · `GET /businesses/:id/payments/:id` · `GET /businesses/:id/payments/:id/afip` |
+| `/dashboard/businesses` | `GET /businesses/:id` · `GET /businesses/:id/mp-connect` · `GET /businesses/:id/summary` |
+| `/dashboard/members` (pendiente) | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
+
+### Jerarquía de roles
+
+```
+OWNER > ADMIN > MEMBER > OBSERVER
+```
+
+El backend valida el rol en cada endpoint. El sidebar filtra ítems por `roles[]` en `NAV_ITEMS`.
+
+---
+
+## Setup local
+
+### Rewrites (OBLIGATORIO en local, NUNCA commitear)
+
+`next.config.ts` debe tener este bloque para desarrollo local. El load balancer lo maneja en producción.
+
+```ts
+async rewrites() {
+  return [{ source: '/api/v1/:path*', destination: 'http://localhost:3001/api/v1/:path*' }]
+},
+```
+
+Sin este bloque, las llamadas a `/api/v1/*` llegan al servidor de Next.js y fallan.
+Verificar que esté presente después de cualquier `git pull`, stash pop, o checkout.
+
+### Variables de entorno locales
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+### Backend con hot-reload
+
+```bash
+cd /Users/guillermoandrada/Projects/pay-alert-api
+docker compose stop pay-alert-api pay-alert-worker   # parar contenedores del backend
+npm run dev                                           # arrancar nativo en puerto 3001
+```
+
+Sin esto, el backend Docker sirve código compilado sin tus cambios.
+
+### Credenciales de prueba
+
+```
+owner@test.com / Test1234!   → OWNER, business: cmpa61k6h0002y5sf33s3ixaj
+member@test.com / Test1234!  → MEMBER
+```
+
+### Puertos
+
+| Servicio | Puerto |
+|----------|--------|
+| Frontend (Next.js) | 3000 |
+| Backend API | 3001 |
+| Postgres | 5432 |
+| Redis | 6379 |
