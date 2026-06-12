@@ -86,7 +86,7 @@ export function Sidebar({ role }: SidebarProps) {
   const router = useRouter()
 
   const visibleItems = NAV_ITEMS.filter(
-    (item) => item.exists && (role === null || (item.roles as readonly string[]).includes(role)),
+    (item) => item.exists && (!role || (item.roles as readonly string[]).includes(role)),
   )
 
   function handleLogout() {
