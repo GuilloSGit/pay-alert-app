@@ -139,6 +139,14 @@ Las páginas consumen `useBusinessContext()` — no llaman a `/businesses` ellas
 | `/dashboard/members` | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
 | `/dashboard/settings` (pendiente) | `PUT /users/me` · `POST /auth/change-password` (BE pendiente) · `GET/PUT /businesses/:id/notification-rules` (BE pendiente) · `GET/DELETE /users/me/devices` (BE pendiente) |
 
+### WebSocket tiempo real
+
+`DashboardShell` conecta automáticamente al WebSocket (`/api/v1/ws?token=<jwt>`) cuando el `businessId` está disponible.
+- Hook: `src/lib/use-payment-websocket.ts` — reconexión con exponential backoff (1s→30s)
+- Toast: `src/components/ui/PaymentToast.tsx` — stack bottom-right, max 3, auto-dismiss 5s, sonido "cha-ching" en `payment.received` / `payment.approved`
+- WS URL: `NEXT_PUBLIC_WS_URL` (ver env vars) — **no** usar `NEXT_PUBLIC_API_URL` para WS en local
+- Endpoint de prueba local: `POST /dev/test-notify` (requiere Bearer JWT)
+
 ### Jerarquía de roles
 
 ```
@@ -162,6 +170,7 @@ El backend valida el rol en cada endpoint. El sidebar filtra ítems por `roles[]
 | Key | Value |
 |-----|-------|
 | `NEXT_PUBLIC_API_URL` | `https://pay-alert-api.onrender.com` |
+| `NEXT_PUBLIC_WS_URL` | `wss://pay-alert-api.onrender.com` |
 
 ### DNS
 
@@ -192,7 +201,11 @@ Verificar que esté presente después de cualquier `git pull`, stash pop, o chec
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_WS_URL=ws://localhost:3001
 ```
+
+`NEXT_PUBLIC_API_URL=http://localhost:3000` usa las rewrites de Next.js para proxear HTTP.
+`NEXT_PUBLIC_WS_URL=ws://localhost:3001` va directo al backend — Next.js **no** proxea WebSocket.
 
 ### Credenciales de prueba
 
