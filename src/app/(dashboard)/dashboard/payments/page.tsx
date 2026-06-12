@@ -12,6 +12,13 @@ interface PaymentsResponse {
   meta: { total: number; hasMore: boolean; nextCursor: string | null }
 }
 
+interface AfipData {
+  cuit: string | null
+  cuitType: string | null
+  afipName: string | null
+  available: boolean
+}
+
 type StatusFilter = Payment['status'] | ''
 
 const STATUS_LABELS: Record<Payment['status'], string> = {
@@ -30,6 +37,24 @@ const STATUS_CLASSES: Record<Payment['status'], string> = {
   REFUNDED: 'bg-blue-100 text-blue-800',
 }
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  money_transfer: 'Transferencia',
+  regular_payment: 'QR / Cobro',
+  account_money: 'Cuenta MP',
+  debit_card: 'Tarjeta débito',
+  credit_card: 'Tarjeta crédito',
+  bank_transfer: 'Transferencia bancaria',
+  ticket: 'Cupón / Efectivo',
+  atm: 'ATM',
+  digital_currency: 'Billetera virtual',
+  prepaid_card: 'Tarjeta prepago',
+}
+
+function formatPaymentMethod(method: string | null | undefined) {
+  if (!method) return '—'
+  return PAYMENT_METHOD_LABELS[method] ?? method
+}
+
 function formatAmount(amount: string, currency: string) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(Number(amount))
 }
@@ -45,6 +70,175 @@ function formatDate(dateStr: string | null | undefined) {
   }).format(new Date(dateStr))
 }
 
+function formatDateFull(dateStr: string | null | undefined) {
+  if (!dateStr) return '—'
+  return new Intl.DateTimeFormat('es-AR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(dateStr))
+}
+
+// ─── Panel de detalle ────────────────────────────────────────────────────────
+
+interface DetailPanelProps {
+  payment: Payment
+  businessId: string
+  onClose: () => void
+}
+
+function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
+  const [afipData, setAfipData] = useState<AfipData | null>(null)
+  const [isLoadingAfip, setIsLoadingAfip] = useState(true)
+
+  useEffect(() => {
+    setIsLoadingAfip(true)
+    setAfipData(null)
+    api
+      .get<{ data: AfipData }>(`/api/v1/businesses/${businessId}/payments/${payment.id}/afip`)
+      .then((res) => setAfipData(res.data))
+      .catch(() => setAfipData({ cuit: null, cuitType: null, afipName: null, available: false }))
+      .finally(() => setIsLoadingAfip(false))
+  }, [payment.id, businessId])
+
+  return (
+    <>
+      {/* Overlay */}
+      <div
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-card shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Detalle del pago</h2>
+            <p className="text-xs text-muted font-mono mt-0.5">{payment.mpPaymentId}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* Monto + Estado */}
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-3xl font-bold text-foreground tabular-nums">
+                {formatAmount(payment.amount, payment.currency)}
+              </p>
+              <p className="mt-1 text-sm text-muted">{formatDateFull(payment.paidAt ?? payment.receivedAt)}</p>
+            </div>
+            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${STATUS_CLASSES[payment.status]}`}>
+              {STATUS_LABELS[payment.status]}
+            </span>
+          </div>
+
+          {/* Datos del pago */}
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Datos del pago</h3>
+            <dl className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <dt className="text-muted">Método</dt>
+                <dd className="font-medium text-foreground">{formatPaymentMethod(payment.paymentMethod)}</dd>
+              </div>
+              {payment.description && (
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Descripción</dt>
+                  <dd className="font-medium text-foreground text-right max-w-[60%]">{payment.description}</dd>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <dt className="text-muted">Recibido</dt>
+                <dd className="font-medium text-foreground">{formatDate(payment.receivedAt)}</dd>
+              </div>
+              {payment.paidAt && (
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Acreditado</dt>
+                  <dd className="font-medium text-foreground">{formatDate(payment.paidAt)}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          {/* Pagador — datos de MP */}
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Pagador (Mercado Pago)</h3>
+            <dl className="space-y-3">
+              {payment.payerName ? (
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Nombre</dt>
+                  <dd className="font-medium text-foreground">{payment.payerName}</dd>
+                </div>
+              ) : null}
+              {payment.payerEmail ? (
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Email</dt>
+                  <dd className="font-medium text-foreground break-all">{payment.payerEmail}</dd>
+                </div>
+              ) : null}
+              {!payment.payerName && !payment.payerEmail && (
+                <p className="text-sm text-muted italic">Pagador anónimo — MP no expone los datos para esta transacción.</p>
+              )}
+            </dl>
+          </section>
+
+          {/* Datos AFIP / ARCA */}
+          <section className="rounded-xl border border-border bg-gray-50 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Identidad AFIP / ARCA</h3>
+              {isLoadingAfip && (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              )}
+            </div>
+
+            {isLoadingAfip ? (
+              <div className="space-y-2">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-1/2 animate-pulse rounded bg-gray-200" />
+              </div>
+            ) : afipData?.available ? (
+              <dl className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">{afipData.cuitType ?? 'CUIT/CUIL'}</dt>
+                  <dd className="font-mono text-foreground">{afipData.cuit}</dd>
+                </div>
+                {afipData.afipName ? (
+                  <div className="flex justify-between text-sm">
+                    <dt className="text-muted">Razón social</dt>
+                    <dd className="font-semibold text-foreground text-right">{afipData.afipName}</dd>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted italic">CUIT encontrado pero sin nombre en el padrón.</p>
+                )}
+              </dl>
+            ) : (
+              <p className="text-sm text-muted italic">
+                Sin datos tributarios disponibles — MP no expone la identificación del pagador para esta transacción.
+              </p>
+            )}
+          </section>
+
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Página principal ────────────────────────────────────────────────────────
+
 export default function PaymentsPage() {
   const { businessId } = useActiveBusiness()
 
@@ -57,6 +251,7 @@ export default function PaymentsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const [status, setStatus] = useState<StatusFilter>('')
   const [from, setFrom] = useState('')
@@ -237,7 +432,11 @@ export default function PaymentsPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={p.id}
+                        onClick={() => setSelectedPayment(p)}
+                        className={`cursor-pointer transition-colors hover:bg-blue-50 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
+                      >
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[p.status]}`}>
                             {STATUS_LABELS[p.status]}
@@ -256,7 +455,7 @@ export default function PaymentsPage() {
                             <span className="text-muted">—</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-muted">{p.paymentMethod ?? '—'}</td>
+                        <td className="px-6 py-4 text-muted">{formatPaymentMethod(p.paymentMethod)}</td>
                         <td className="px-6 py-4 text-muted whitespace-nowrap">
                           {formatDate(p.paidAt ?? p.receivedAt)}
                         </td>
@@ -289,6 +488,15 @@ export default function PaymentsPage() {
           )}
         </Card>
       </main>
+
+      {/* Panel de detalle con AFIP */}
+      {selectedPayment && businessId && (
+        <DetailPanel
+          payment={selectedPayment}
+          businessId={businessId}
+          onClose={() => setSelectedPayment(null)}
+        />
+      )}
     </div>
   )
 }
