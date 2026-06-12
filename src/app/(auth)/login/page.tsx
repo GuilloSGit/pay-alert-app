@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { api, ApiError } from '@/lib/api'
 import { saveSession } from '@/lib/auth'
@@ -58,15 +59,21 @@ export default function LoginPage() {
           autoComplete="email"
           required
         />
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          label="Contraseña"
-          placeholder="••••••••"
-          autoComplete="current-password"
-          required
-        />
+        <div>
+          <PasswordInput
+            id="password"
+            name="password"
+            label="Contraseña"
+            placeholder="••••••••"
+            autoComplete="current-password"
+            required
+          />
+          <div className="mt-1.5 text-right">
+            <Link href="/forgot-password" className="text-xs text-muted hover:text-primary hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+        </div>
 
         {error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>

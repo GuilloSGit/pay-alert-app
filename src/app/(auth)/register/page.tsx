@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { api, ApiError } from '@/lib/api'
 
@@ -84,10 +85,9 @@ export default function RegisterPage() {
           autoComplete="email"
           required
         />
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           label="Contraseña"
           placeholder="Mínimo 8 caracteres"
           autoComplete="new-password"

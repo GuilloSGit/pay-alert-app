@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register']
-// Accessible with or without session — invitation links must work for both new and existing users
-const OPEN_PATHS = ['/invitations/']
+// Accessible with or without session — invitation links and password reset links must work for both new and existing users
+const OPEN_PATHS = ['/invitations/', '/forgot-password', '/reset-password/']
 
 // En Next.js 16 el archivo de middleware se llama proxy.ts y exporta `proxy`.
 export function proxy(request: NextRequest) {

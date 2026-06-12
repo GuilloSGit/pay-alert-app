@@ -11,6 +11,7 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message: string,
+    public data?: unknown,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -68,7 +69,7 @@ async function request<T>(path: string, options: FetchOptions = {}, isRetry = fa
   const body = await res.json().catch(() => ({}))
 
   if (!res.ok) {
-    throw new ApiError(res.status, body.code ?? 'UNKNOWN_ERROR', body.error ?? 'Error desconocido')
+    throw new ApiError(res.status, body.code ?? 'UNKNOWN_ERROR', body.error ?? 'Error desconocido', body.data)
   }
 
   return body as T
