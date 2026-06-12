@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { api } from '@/lib/api'
 import { registerDevice } from '@/lib/device'
 import { BusinessContext } from '@/lib/business-context'
+import { usePaymentWebSocket } from '@/lib/use-payment-websocket'
+import { PaymentToastContainer } from '@/components/ui/PaymentToast'
 import type { BusinessRole, BusinessMembership, ApiResponse } from '@/types'
 import type { DeviceLimitInfo } from '@/lib/device'
+import type { WsPaymentMessage } from '@/lib/use-payment-websocket'
+import type { PaymentToast } from '@/components/ui/PaymentToast'
 
 function DeviceLimitModal({
   currentDevice,
@@ -64,6 +68,8 @@ function DeviceLimitModal({
   )
 }
 
+let toastCounter = 0
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -74,6 +80,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const [deviceLimitModal, setDeviceLimitModal] = useState<{ currentDevice: DeviceLimitInfo | null } | null>(null)
   const [isReplacingDevice, setIsReplacingDevice] = useState(false)
+
+  const [toasts, setToasts] = useState<PaymentToast[]>([])
+
+  const handleWsMessage = useCallback((msg: WsPaymentMessage) => {
+    setToasts((prev) => {
+      const next = [...prev, { id: ++toastCounter, msg }]
+      return next.length > 3 ? next.slice(next.length - 3) : next
+    })
+  }, [])
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
+  usePaymentWebSocket(businessId !== null, handleWsMessage)
 
   useEffect(() => {
     api
@@ -120,6 +141,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           isPending={isReplacingDevice}
         />
       )}
+      <PaymentToastContainer toasts={toasts} onDismiss={dismissToast} />
     </BusinessContext.Provider>
   )
 }
