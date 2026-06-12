@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { getAccessToken } from './auth'
+import { tryRefresh } from './api'
 
 // WS URL separada porque las rewrites de Next.js solo proxean HTTP, no WebSocket.
 // En prod: NEXT_PUBLIC_WS_URL = wss://pay-alert-api.onrender.com
@@ -65,8 +66,13 @@ export function usePaymentWebSocket(
         } catch {}
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (!active) return
+        // 4001 = token inválido/expirado — refrescar antes de reconectar
+        if (event.code === 4001) {
+          tryRefresh().then(connect)
+          return
+        }
         const current = delay
         delay = Math.min(delay * 2, 30_000)
         reconnectTimeout = setTimeout(connect, current)
