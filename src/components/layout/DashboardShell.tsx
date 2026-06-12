@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { api } from '@/lib/api'
 import { registerDevice } from '@/lib/device'
@@ -64,6 +65,9 @@ function DeviceLimitModal({
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const pathname = usePathname()
+
   const [businessId, setBusinessId] = useState<string | null>(null)
   const [businessName, setBusinessName] = useState<string | null>(null)
   const [role, setRole] = useState<BusinessRole | null>(null)
@@ -80,6 +84,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           setBusinessId(first.id)
           setBusinessName(first.name)
           setRole(first.role)
+        } else if (pathname !== '/dashboard/businesses') {
+          router.replace('/dashboard/businesses')
         }
       })
       .catch(() => {})

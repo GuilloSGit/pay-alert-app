@@ -164,6 +164,23 @@ export default function BusinessesPage() {
       <Header title="Mi Comercio" />
       <main className="flex-1 p-6 space-y-6">
 
+        {/* Banner onboarding — visible si el usuario no tiene comercio aún */}
+        {!businessId && (
+          <div className="flex items-start gap-4 rounded-xl border border-primary/30 bg-primary-light px-5 py-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-primary-dark">¡Bienvenido a Pay Alert!</p>
+              <p className="mt-0.5 text-sm text-primary-dark/80">
+                Creá tu primer comercio y conectalo a Mercado Pago para empezar a recibir alertas de cobros en tiempo real.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Datos del comercio */}
         <Card>
           <div className="flex items-start justify-between mb-4">
