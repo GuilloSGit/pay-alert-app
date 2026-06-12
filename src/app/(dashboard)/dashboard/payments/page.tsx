@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { api } from '@/lib/api'
@@ -61,6 +61,8 @@ export default function PaymentsPage() {
   const [status, setStatus] = useState<StatusFilter>('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [q, setQ] = useState('')
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchPayments = useCallback(
     async (cursor?: string) => {
@@ -74,6 +76,7 @@ export default function PaymentsPage() {
         toDate.setHours(23, 59, 59, 999)
         params.set('to', toDate.toISOString())
       }
+      if (q.trim()) params.set('q', q.trim())
       if (cursor) params.set('cursor', cursor)
 
       const res = await api.get<PaymentsResponse & ApiResponse<Payment[]>>(
@@ -81,7 +84,7 @@ export default function PaymentsPage() {
       )
       return res as unknown as PaymentsResponse
     },
-    [businessId, status, from, to],
+    [businessId, status, from, to, q],
   )
 
   useEffect(() => {
@@ -111,21 +114,43 @@ export default function PaymentsPage() {
     }
   }
 
+  function handleSearchChange(value: string) {
+    setQ(value)
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setQ(value), 400)
+  }
+
   function clearFilters() {
     setStatus('')
     setFrom('')
     setTo('')
+    setQ('')
   }
 
-  const hasFilters = status !== '' || from !== '' || to !== ''
+  const hasFilters = status !== '' || from !== '' || to !== '' || q !== ''
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
       <Header title="Pagos" />
       <main className="flex-1 p-6">
 
-        {/* Filtros */}
+        {/* Búsqueda + Filtros */}
         <div className="mb-4 flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted">Buscar</label>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Nombre, email, ID de MP..."
+                value={q}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-64 rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted">Estado</label>
             <select
