@@ -1,0 +1,19 @@
+services:
+  # ── Frontend (Next.js) ──────────────────────────────────────────────────────
+  - type: web
+    name: pay-alert-app
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: HOSTNAME
+        value: 0.0.0.0
+      # Build-time: baked en el bundle del cliente por Next.js.
+      # Render pasa env vars como Docker build args automáticamente.
+      - key: NEXT_PUBLIC_API_URL
+        value: https://pay-alert-api.onrender.com
