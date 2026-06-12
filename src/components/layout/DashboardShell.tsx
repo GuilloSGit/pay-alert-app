@@ -90,8 +90,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       const next = [...prev, { id: ++toastCounter, msg }]
       return next.length > 3 ? next.slice(next.length - 3) : next
     })
-    queryClient.invalidateQueries({ queryKey: ['summary'] })
-    queryClient.invalidateQueries({ queryKey: ['payments'] })
+    void queryClient.refetchQueries({ queryKey: ['summary'], type: 'active' })
+    void queryClient.refetchQueries({ queryKey: ['payments'], type: 'active' })
   }, [queryClient])
 
   const dismissToast = useCallback((id: number) => {
