@@ -56,9 +56,10 @@ RUN npm run build
 3. Verificar que `roles` sea correcto (jerarquía: OWNER > ADMIN > MEMBER > OBSERVER)
 La página solo aparece en el sidebar cuando `exists: true` Y el rol del usuario está en `roles`.
 
-### `output: 'standalone'` requerido para Docker
-`next.config.ts` debe tener `output: 'standalone'` para que el Dockerfile multi-stage
-copie solo `.next/standalone/` en la imagen final (runner stage).
+### `output: 'standalone'` — solo para Docker
+`next.config.ts` puede tener `output: 'standalone'` para builds Docker multi-stage.
+**No es necesario para Vercel** (el deploy actual usa Vercel, que ignora esta opción).
+Si se vuelve a dockerizar, reactivar este setting.
 
 ### Íconos y OG image — generación dinámica (edge runtime)
 
@@ -98,9 +99,7 @@ Si se agrega un nuevo endpoint de asset, agregarlo aquí o el middleware lo
 redirigirá a `/login` cuando el usuario no tenga sesión.
 
 ### `public/` no puede estar vacío
-Git no trackea directorios vacíos. Si se eliminan todos los archivos de `public/`,
-el directorio desaparece y el `COPY public/ /app/public/` del Dockerfile falla.
-Solución: mantener `public/.gitkeep` siempre en el repo.
+Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el repo.
 <!-- END:nextjs-agent-rules -->
 
 ---
@@ -112,12 +111,14 @@ Solución: mantener `public/.gitkeep` siempre en el repo.
 | Ruta | Archivo | Estado |
 |------|---------|--------|
 | `/` | `src/app/page.tsx` | ✅ Landing |
-| `/login` | `src/app/(auth)/login/page.tsx` | ✅ |
-| `/register` | `src/app/(auth)/register/page.tsx` | ✅ |
+| `/login` | `src/app/(auth)/login/page.tsx` | ✅ + ojo toggle + link "¿Olvidaste tu contraseña?" |
+| `/register` | `src/app/(auth)/register/page.tsx` | ✅ + ojo toggle |
+| `/forgot-password` | `src/app/(auth)/forgot-password/page.tsx` | ✅ |
+| `/reset-password/[token]` | `src/app/(auth)/reset-password/[token]/page.tsx` | ✅ |
 | `/dashboard` | `src/app/(dashboard)/dashboard/page.tsx` | ✅ Stats + últimos pagos |
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
-| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP, suscripción |
-| `/dashboard/members` | — | ⬜ pendiente |
+| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP, suscripción + banner onboarding |
+| `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
 | `/dashboard/settings` | — | ⬜ pendiente |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
 
@@ -135,7 +136,8 @@ Las páginas consumen `useBusinessContext()` — no llaman a `/businesses` ellas
 | `/dashboard` | `GET /businesses/:id/summary` |
 | `/dashboard/payments` | `GET /businesses/:id/payments` · `GET /businesses/:id/payments/:id` · `GET /businesses/:id/payments/:id/afip` |
 | `/dashboard/businesses` | `GET /businesses/:id` · `GET /businesses/:id/mp-connect` · `GET /businesses/:id/summary` |
-| `/dashboard/members` (pendiente) | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
+| `/dashboard/members` | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
+| `/dashboard/settings` (pendiente) | `PUT /users/me` · `POST /auth/change-password` (BE pendiente) · `GET/PUT /businesses/:id/notification-rules` (BE pendiente) · `GET/DELETE /users/me/devices` (BE pendiente) |
 
 ### Jerarquía de roles
 
@@ -147,11 +149,35 @@ El backend valida el rol en cada endpoint. El sidebar filtra ítems por `roles[]
 
 ---
 
+## Deploy
+
+| Servicio | Plataforma | URL |
+|----------|-----------|-----|
+| Frontend | **Vercel** (repo `GuilloSGit/pay-alert-app`) | `https://pay-alert.com.ar` |
+| Backend API | **Render** | `https://pay-alert-api.onrender.com` |
+| Worker BullMQ | **Render** | — |
+
+### Variables de entorno en Vercel
+
+| Key | Value |
+|-----|-------|
+| `NEXT_PUBLIC_API_URL` | `https://pay-alert-api.onrender.com` |
+
+### DNS
+
+Dominio `pay-alert.com.ar` gestionado en **Vercel DNS** (NS apuntan a Vercel).
+Registros relevantes:
+- `A @` → `216.24.57.1` (Render)
+- `CNAME www` → `pay-alert-app.onrender.com`
+- Registros Resend (MX, TXT) para email
+
+---
+
 ## Setup local
 
 ### Rewrites (OBLIGATORIO en local, NUNCA commitear)
 
-`next.config.ts` debe tener este bloque para desarrollo local. El load balancer lo maneja en producción.
+`next.config.ts` debe tener este bloque para desarrollo local. Vercel lo maneja en producción via `NEXT_PUBLIC_API_URL`.
 
 ```ts
 async rewrites() {
@@ -167,16 +193,6 @@ Verificar que esté presente después de cualquier `git pull`, stash pop, o chec
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
-
-### Backend con hot-reload
-
-```bash
-cd /Users/guillermoandrada/Projects/pay-alert-api
-docker compose stop pay-alert-api pay-alert-worker   # parar contenedores del backend
-npm run dev                                           # arrancar nativo en puerto 3001
-```
-
-Sin esto, el backend Docker sirve código compilado sin tus cambios.
 
 ### Credenciales de prueba
 
