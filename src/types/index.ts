@@ -25,7 +25,7 @@ export interface Payment {
   id: string
   businessId: string
   mpPaymentId: string
-  amount: number
+  amount: string
   currency: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED'
   description?: string
