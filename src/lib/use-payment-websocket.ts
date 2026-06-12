@@ -3,9 +3,14 @@
 import { useEffect, useRef } from 'react'
 import { getAccessToken } from './auth'
 
-const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001')
-  .replace(/^https/, 'wss')
-  .replace(/^http/, 'ws')
+// WS URL separada porque las rewrites de Next.js solo proxean HTTP, no WebSocket.
+// En prod: NEXT_PUBLIC_WS_URL = wss://pay-alert-api.onrender.com
+// En local: NEXT_PUBLIC_WS_URL = ws://localhost:3001 (aunque NEXT_PUBLIC_API_URL sea :3000)
+const WS_BASE =
+  process.env.NEXT_PUBLIC_WS_URL ??
+  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001')
+    .replace(/^https/, 'wss')
+    .replace(/^http/, 'ws')
 
 export type WsPaymentEvent =
   | 'payment.received'

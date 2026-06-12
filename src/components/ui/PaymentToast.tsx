@@ -4,6 +4,30 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { WsPaymentEvent, WsPaymentMessage } from '@/lib/use-payment-websocket'
 
+function playCashRegister() {
+  try {
+    const ctx = new AudioContext()
+    // Dos "dings" escalonados: el clásico "cha-ching"
+    const notes = [
+      { freq: 1400, start: 0,    dur: 0.12 },
+      { freq: 1100, start: 0.08, dur: 0.18 },
+      { freq: 1600, start: 0.16, dur: 0.10 },
+    ]
+    notes.forEach(({ freq, start, dur }) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'triangle'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + start)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
+      osc.start(ctx.currentTime + start)
+      osc.stop(ctx.currentTime + start + dur)
+    })
+  } catch {}
+}
+
 export interface PaymentToast {
   id: number
   msg: WsPaymentMessage
@@ -39,9 +63,12 @@ function ToastItem({
   const { data } = toast.msg
 
   useEffect(() => {
+    if (toast.msg.type === 'payment.received' || toast.msg.type === 'payment.approved') {
+      playCashRegister()
+    }
     const timer = setTimeout(() => onDismiss(toast.id), 5_000)
     return () => clearTimeout(timer)
-  }, [toast.id, onDismiss])
+  }, [toast.id, toast.msg.type, onDismiss])
 
   function handleClick() {
     router.push('/dashboard/payments')
