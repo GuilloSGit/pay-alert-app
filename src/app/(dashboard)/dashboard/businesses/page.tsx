@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { Business, ApiResponse } from '@/types'
@@ -267,9 +269,7 @@ export default function BusinessesPage() {
               {business?.category && (
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">Categoría</p>
-                  <span className="mt-1 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                    {business.category}
-                  </span>
+                  <Badge className="mt-1 bg-gray-100 text-gray-700">{business.category}</Badge>
                 </div>
               )}
               <div>
@@ -423,13 +423,13 @@ export default function BusinessesPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">Estado</p>
-                  <span className={`mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  <Badge className={`mt-1 ${
                     subscription.status === 'ACTIVE' || subscription.status === 'TRIALING'
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
                     {SUBSCRIPTION_STATUS_LABELS[subscription.status] ?? subscription.status}
-                  </span>
+                  </Badge>
                 </div>
                 {subscription.trialEndsAt && (
                   <div>
@@ -443,15 +443,16 @@ export default function BusinessesPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-muted">
+              <EmptyState
+                size="sm"
+                icon={
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
-                </div>
-                <p className="text-sm font-medium text-foreground">Sin plan activo</p>
-                <p className="mt-1 text-sm text-muted">Contactanos para activar tu suscripción.</p>
-              </div>
+                }
+                title="Sin plan activo"
+                description="Contactanos para activar tu suscripción."
+              />
             )}
           </Card>
         </div>

@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
+import { Spinner } from '@/components/ui/Spinner'
+import { Badge } from '@/components/ui/Badge'
+import { SlideOver } from '@/components/ui/SlideOver'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { BusinessMember, BusinessRole } from '@/types'
@@ -107,137 +111,69 @@ function InviteSlideOver({ businessId, onSuccess, onClose }: InviteSlideOverProp
   }
 
   return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-card shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Invitar miembro</h2>
-            <p className="mt-0.5 text-xs text-muted">El invitado recibirá un email con un enlace</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <SlideOver title="Invitar miembro" subtitle="El invitado recibirá un email con un enlace" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-foreground">Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="nombre@empresa.com"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 p-6">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nombre@empresa.com"
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-foreground">Rol</label>
-            {(['ADMIN', 'MEMBER', 'OBSERVER'] as const).map((r) => (
-              <label
-                key={r}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                  role === r ? 'border-primary bg-primary-light' : 'border-border hover:bg-gray-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="role"
-                  value={r}
-                  checked={role === r}
-                  onChange={() => setRole(r)}
-                  className="mt-0.5 accent-primary"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{ROLE_LABELS[r]}</p>
-                  <p className="mt-0.5 text-xs text-muted">{ROLE_DESCRIPTIONS[r]}</p>
-                </div>
-              </label>
-            ))}
-          </div>
-
-          {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-
-          <div className="mt-auto">
-            <button
-              type="submit"
-              disabled={isPending || !email.trim()}
-              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-medium text-foreground">Rol</label>
+          {(['ADMIN', 'MEMBER', 'OBSERVER'] as const).map((r) => (
+            <label
+              key={r}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                role === r ? 'border-primary bg-primary-light' : 'border-border hover:bg-gray-50'
+              }`}
             >
-              {isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Enviando...
-                </span>
-              ) : (
-                'Enviar invitación'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </>
-  )
-}
-
-// ─── Revoke Modal ─────────────────────────────────────────────────────────────
-
-interface RevokeModalProps {
-  member: BusinessMember
-  isPending: boolean
-  onConfirm: () => void
-  onCancel: () => void
-}
-
-function RevokeModal({ member, isPending, onConfirm, onCancel }: RevokeModalProps) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-          <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"
-            />
-          </svg>
+              <input
+                type="radio"
+                name="role"
+                value={r}
+                checked={role === r}
+                onChange={() => setRole(r)}
+                className="mt-0.5 accent-primary"
+              />
+              <div>
+                <p className="text-sm font-semibold text-foreground">{ROLE_LABELS[r]}</p>
+                <p className="mt-0.5 text-xs text-muted">{ROLE_DESCRIPTIONS[r]}</p>
+              </div>
+            </label>
+          ))}
         </div>
-        <h3 className="text-base font-semibold text-foreground">Revocar acceso</h3>
-        <p className="mt-1 text-sm text-muted">
-          ¿Querés revocar el acceso de{' '}
-          <strong className="text-foreground">{member.user.name}</strong>? Ya no podrá ingresar al
-          comercio.
-        </p>
-        <div className="mt-6 flex gap-3">
+
+        {error && (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-auto">
           <button
-            onClick={onCancel}
-            className="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100"
+            type="submit"
+            disabled={isPending || !email.trim()}
+            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isPending}
-            className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {isPending ? 'Revocando...' : 'Revocar acceso'}
+            {isPending ? (
+              <span className="flex items-center justify-center gap-2">
+                <Spinner size="sm" className="border-white" />
+                Enviando...
+              </span>
+            ) : (
+              'Enviar invitación'
+            )}
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </SlideOver>
   )
 }
 
@@ -314,122 +250,145 @@ export default function MembersPage() {
 
   return (
     <PageShell title="Equipo" className="space-y-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        ) : (
-          <>
-            {/* Resumen + botón invitar */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted">
-                <span className="font-medium text-foreground">{members.length}</span>{' '}
-                {members.length === 1 ? 'miembro activo' : 'miembros activos'}
-                {invitations.length > 0 && (
-                  <>
-                    {' '}
-                    &middot;{' '}
-                    <span className="font-medium text-foreground">{invitations.length}</span>{' '}
-                    {invitations.length === 1 ? 'invitación pendiente' : 'invitaciones pendientes'}
-                  </>
-                )}
-              </p>
-              {isManager && (
-                <button
-                  onClick={() => setShowInvite(true)}
-                  className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Invitar miembro
-                </button>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <Spinner />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      ) : (
+        <>
+          {/* Resumen + botón invitar */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted">
+              <span className="font-medium text-foreground">{members.length}</span>{' '}
+              {members.length === 1 ? 'miembro activo' : 'miembros activos'}
+              {invitations.length > 0 && (
+                <>
+                  {' '}
+                  &middot;{' '}
+                  <span className="font-medium text-foreground">{invitations.length}</span>{' '}
+                  {invitations.length === 1 ? 'invitación pendiente' : 'invitaciones pendientes'}
+                </>
               )}
-            </div>
+            </p>
+            {isManager && (
+              <button
+                onClick={() => setShowInvite(true)}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Invitar miembro
+              </button>
+            )}
+          </div>
 
-            {/* Tabla de miembros activos */}
+          {/* Tabla de miembros activos */}
+          <Card className="overflow-hidden p-0">
+            <div className="border-b border-border px-6 py-4">
+              <h2 className="text-sm font-semibold text-foreground">Miembros activos</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Miembro</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Rol</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Desde</th>
+                    {isManager && (
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">Acciones</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {members.map((m) => (
+                    <tr key={m.id} className="transition-colors hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(m.user.id)}`}>
+                            {getInitials(m.user.name)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{m.user.name}</p>
+                            <p className="text-xs text-muted">{m.user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {isOwner && m.role !== 'OWNER' ? (
+                          <select
+                            value={m.role}
+                            disabled={changingRoleId === m.id}
+                            onChange={(e) => handleRoleChange(m.id, e.target.value as BusinessRole)}
+                            className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                          >
+                            {(['ADMIN', 'MEMBER', 'OBSERVER'] as const).map((r) => (
+                              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Badge className={ROLE_CLASSES[m.role]}>{ROLE_LABELS[m.role]}</Badge>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-muted">{formatDate(m.joinedAt)}</td>
+                      {isManager && (
+                        <td className="px-6 py-4 text-right">
+                          {m.role !== 'OWNER' && (
+                            <button
+                              onClick={() => setRevokeTarget(m)}
+                              className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                            >
+                              Revocar
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Tabla de invitaciones pendientes */}
+          {invitations.length > 0 && (
             <Card className="overflow-hidden p-0">
               <div className="border-b border-border px-6 py-4">
-                <h2 className="text-sm font-semibold text-foreground">Miembros activos</h2>
+                <h2 className="text-sm font-semibold text-foreground">Invitaciones pendientes</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-gray-50">
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">
-                        Miembro
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">
-                        Rol
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">
-                        Desde
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Rol</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Tiempo restante</th>
                       {isManager && (
-                        <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">
-                          Acciones
-                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">Acciones</th>
                       )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {members.map((m) => (
-                      <tr key={m.id} className="transition-colors hover:bg-gray-50">
+                    {invitations.map((inv) => (
+                      <tr key={inv.id} className="transition-colors hover:bg-gray-50">
+                        <td className="px-6 py-4 font-medium text-foreground">{inv.email}</td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(m.user.id)}`}
-                            >
-                              {getInitials(m.user.name)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{m.user.name}</p>
-                              <p className="text-xs text-muted">{m.user.email}</p>
-                            </div>
-                          </div>
+                          <Badge className={ROLE_CLASSES[inv.role]}>{ROLE_LABELS[inv.role]}</Badge>
                         </td>
-                        <td className="px-6 py-4">
-                          {isOwner && m.role !== 'OWNER' ? (
-                            <select
-                              value={m.role}
-                              disabled={changingRoleId === m.id}
-                              onChange={(e) => handleRoleChange(m.id, e.target.value as BusinessRole)}
-                              className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                            >
-                              {(['ADMIN', 'MEMBER', 'OBSERVER'] as const).map((r) => (
-                                <option key={r} value={r}>
-                                  {ROLE_LABELS[r]}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_CLASSES[m.role]}`}
-                            >
-                              {ROLE_LABELS[m.role]}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-muted">{formatDate(m.joinedAt)}</td>
+                        <td className="px-6 py-4 text-muted">{timeRemaining(inv.expiresAt)}</td>
                         {isManager && (
                           <td className="px-6 py-4 text-right">
-                            {m.role !== 'OWNER' && (
-                              <button
-                                onClick={() => setRevokeTarget(m)}
-                                className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-                              >
-                                Revocar
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleCancelInvitation(inv.id)}
+                              disabled={cancellingInvId === inv.id}
+                              className="rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground disabled:opacity-50"
+                            >
+                              {cancellingInvId === inv.id ? 'Cancelando...' : 'Cancelar'}
+                            </button>
                           </td>
                         )}
                       </tr>
@@ -438,65 +397,10 @@ export default function MembersPage() {
                 </table>
               </div>
             </Card>
+          )}
+        </>
+      )}
 
-            {/* Tabla de invitaciones pendientes */}
-            {invitations.length > 0 && (
-              <Card className="overflow-hidden p-0">
-                <div className="border-b border-border px-6 py-4">
-                  <h2 className="text-sm font-semibold text-foreground">Invitaciones pendientes</h2>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-gray-50">
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">
-                          Rol
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">
-                          Tiempo restante
-                        </th>
-                        {isManager && (
-                          <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">
-                            Acciones
-                          </th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {invitations.map((inv) => (
-                        <tr key={inv.id} className="transition-colors hover:bg-gray-50">
-                          <td className="px-6 py-4 font-medium text-foreground">{inv.email}</td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_CLASSES[inv.role]}`}
-                            >
-                              {ROLE_LABELS[inv.role]}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-muted">{timeRemaining(inv.expiresAt)}</td>
-                          {isManager && (
-                            <td className="px-6 py-4 text-right">
-                              <button
-                                onClick={() => handleCancelInvitation(inv.id)}
-                                disabled={cancellingInvId === inv.id}
-                                className="rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground disabled:opacity-50"
-                              >
-                                {cancellingInvId === inv.id ? 'Cancelando...' : 'Cancelar'}
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            )}
-          </>
-        )}
       {showInvite && businessId && (
         <InviteSlideOver
           businessId={businessId}
@@ -506,11 +410,25 @@ export default function MembersPage() {
       )}
 
       {revokeTarget && (
-        <RevokeModal
-          member={revokeTarget}
-          isPending={isRevoking}
+        <ConfirmDialog
+          title="Revocar acceso"
+          description={
+            <>
+              ¿Querés revocar el acceso de{' '}
+              <strong className="text-foreground">{revokeTarget.user.name}</strong>? Ya no podrá
+              ingresar al comercio.
+            </>
+          }
+          icon={
+            <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+            </svg>
+          }
+          confirmLabel="Revocar acceso"
+          pendingLabel="Revocando..."
           onConfirm={handleRevoke}
           onCancel={() => setRevokeTarget(null)}
+          isPending={isRevoking}
         />
       )}
     </PageShell>

@@ -4,6 +4,10 @@ import { useState, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
+import { Spinner } from '@/components/ui/Spinner'
+import { Badge } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { api } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { Payment, ApiResponse } from '@/types'
@@ -102,135 +106,110 @@ function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
   })
 
   return (
-    <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <SlideOver
+      title="Detalle del pago"
+      subtitle={payment.mpPaymentId}
+      subtitleClassName="text-xs text-muted font-mono mt-0.5"
+      onClose={onClose}
+    >
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-      {/* Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-card shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        {/* Monto + Estado */}
+        <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Detalle del pago</h2>
-            <p className="text-xs text-muted font-mono mt-0.5">{payment.mpPaymentId}</p>
+            <p className="text-3xl font-bold text-foreground tabular-nums">
+              {formatAmount(payment.amount, payment.currency)}
+            </p>
+            <p className="mt-1 text-sm text-muted">{formatDateFull(payment.paidAt ?? payment.receivedAt)}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <Badge className={STATUS_CLASSES[payment.status]}>{STATUS_LABELS[payment.status]}</Badge>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-          {/* Monto + Estado */}
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-3xl font-bold text-foreground tabular-nums">
-                {formatAmount(payment.amount, payment.currency)}
-              </p>
-              <p className="mt-1 text-sm text-muted">{formatDateFull(payment.paidAt ?? payment.receivedAt)}</p>
+        {/* Datos del pago */}
+        <section>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Datos del pago</h3>
+          <dl className="space-y-3">
+            <div className="flex justify-between text-sm">
+              <dt className="text-muted">Método</dt>
+              <dd className="font-medium text-foreground">{formatPaymentMethod(payment.paymentMethod)}</dd>
             </div>
-            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${STATUS_CLASSES[payment.status]}`}>
-              {STATUS_LABELS[payment.status]}
-            </span>
-          </div>
-
-          {/* Datos del pago */}
-          <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Datos del pago</h3>
-            <dl className="space-y-3">
+            {payment.description && (
               <div className="flex justify-between text-sm">
-                <dt className="text-muted">Método</dt>
-                <dd className="font-medium text-foreground">{formatPaymentMethod(payment.paymentMethod)}</dd>
+                <dt className="text-muted">Descripción</dt>
+                <dd className="font-medium text-foreground text-right max-w-[60%]">{payment.description}</dd>
               </div>
-              {payment.description && (
-                <div className="flex justify-between text-sm">
-                  <dt className="text-muted">Descripción</dt>
-                  <dd className="font-medium text-foreground text-right max-w-[60%]">{payment.description}</dd>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <dt className="text-muted">Recibido</dt>
-                <dd className="font-medium text-foreground">{formatDate(payment.receivedAt)}</dd>
-              </div>
-              {payment.paidAt && (
-                <div className="flex justify-between text-sm">
-                  <dt className="text-muted">Acreditado</dt>
-                  <dd className="font-medium text-foreground">{formatDate(payment.paidAt)}</dd>
-                </div>
-              )}
-            </dl>
-          </section>
-
-          {/* Pagador — datos de MP */}
-          <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Pagador (Mercado Pago)</h3>
-            <dl className="space-y-3">
-              {payment.payerName ? (
-                <div className="flex justify-between text-sm">
-                  <dt className="text-muted">Nombre</dt>
-                  <dd className="font-medium text-foreground">{payment.payerName}</dd>
-                </div>
-              ) : null}
-              {payment.payerEmail ? (
-                <div className="flex justify-between text-sm">
-                  <dt className="text-muted">Email</dt>
-                  <dd className="font-medium text-foreground break-all">{payment.payerEmail}</dd>
-                </div>
-              ) : null}
-              {!payment.payerName && !payment.payerEmail && (
-                <p className="text-sm text-muted italic">Pagador anónimo — MP no expone los datos para esta transacción.</p>
-              )}
-            </dl>
-          </section>
-
-          {/* Datos AFIP / ARCA */}
-          <section className="rounded-xl border border-border bg-gray-50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Identidad AFIP / ARCA</h3>
-              {isLoadingAfip && (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              )}
-            </div>
-
-            {isLoadingAfip ? (
-              <div className="space-y-2">
-                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
-                <div className="h-4 w-1/2 animate-pulse rounded bg-gray-200" />
-              </div>
-            ) : afipData?.available ? (
-              <dl className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <dt className="text-muted">{afipData.cuitType ?? 'CUIT/CUIL'}</dt>
-                  <dd className="font-mono text-foreground">{afipData.cuit}</dd>
-                </div>
-                {afipData.afipName ? (
-                  <div className="flex justify-between text-sm">
-                    <dt className="text-muted">Razón social</dt>
-                    <dd className="font-semibold text-foreground text-right">{afipData.afipName}</dd>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted italic">CUIT encontrado pero sin nombre en el padrón.</p>
-                )}
-              </dl>
-            ) : (
-              <p className="text-sm text-muted italic">
-                Sin datos tributarios disponibles — MP no expone la identificación del pagador para esta transacción.
-              </p>
             )}
-          </section>
+            <div className="flex justify-between text-sm">
+              <dt className="text-muted">Recibido</dt>
+              <dd className="font-medium text-foreground">{formatDate(payment.receivedAt)}</dd>
+            </div>
+            {payment.paidAt && (
+              <div className="flex justify-between text-sm">
+                <dt className="text-muted">Acreditado</dt>
+                <dd className="font-medium text-foreground">{formatDate(payment.paidAt)}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
 
-        </div>
+        {/* Pagador — datos de MP */}
+        <section>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Pagador (Mercado Pago)</h3>
+          <dl className="space-y-3">
+            {payment.payerName ? (
+              <div className="flex justify-between text-sm">
+                <dt className="text-muted">Nombre</dt>
+                <dd className="font-medium text-foreground">{payment.payerName}</dd>
+              </div>
+            ) : null}
+            {payment.payerEmail ? (
+              <div className="flex justify-between text-sm">
+                <dt className="text-muted">Email</dt>
+                <dd className="font-medium text-foreground break-all">{payment.payerEmail}</dd>
+              </div>
+            ) : null}
+            {!payment.payerName && !payment.payerEmail && (
+              <p className="text-sm text-muted italic">Pagador anónimo — MP no expone los datos para esta transacción.</p>
+            )}
+          </dl>
+        </section>
+
+        {/* Datos AFIP / ARCA */}
+        <section className="rounded-xl border border-border bg-gray-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Identidad AFIP / ARCA</h3>
+            {isLoadingAfip && <Spinner size="sm" className="border-primary" />}
+          </div>
+
+          {isLoadingAfip ? (
+            <div className="space-y-2">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-1/2 animate-pulse rounded bg-gray-200" />
+            </div>
+          ) : afipData?.available ? (
+            <dl className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <dt className="text-muted">{afipData.cuitType ?? 'CUIT/CUIL'}</dt>
+                <dd className="font-mono text-foreground">{afipData.cuit}</dd>
+              </div>
+              {afipData.afipName ? (
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Razón social</dt>
+                  <dd className="font-semibold text-foreground text-right">{afipData.afipName}</dd>
+                </div>
+              ) : (
+                <p className="text-sm text-muted italic">CUIT encontrado pero sin nombre en el padrón.</p>
+              )}
+            </dl>
+          ) : (
+            <p className="text-sm text-muted italic">
+              Sin datos tributarios disponibles — MP no expone la identificación del pagador para esta transacción.
+            </p>
+          )}
+        </section>
+
       </div>
-    </>
+    </SlideOver>
   )
 }
 
@@ -333,170 +312,165 @@ export default function PaymentsPage() {
   return (
     <PageShell title="Pagos">
 
-        {/* Encabezado de sección */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-foreground">Historial de pagos</h2>
-          <p className="mt-0.5 text-sm text-muted">Todos los pagos recibidos en tu negocio</p>
+      {/* Encabezado de sección */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-foreground">Historial de pagos</h2>
+        <p className="mt-0.5 text-sm text-muted">Todos los pagos recibidos en tu negocio</p>
+      </div>
+
+      {/* Búsqueda + Filtros */}
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-muted">Buscar</label>
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Nombre, email, ID de MP..."
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-64 rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-muted">Estado</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as StatusFilter)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Todos</option>
+            {(Object.keys(STATUS_LABELS) as Payment['status'][]).map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Búsqueda + Filtros */}
-        <div className="mb-4 flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted">Buscar</label>
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-muted">Desde</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-muted">Hasta</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Tabla */}
+      <Card className="p-0 overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <Spinner />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        ) : payments.length === 0 ? (
+          <EmptyState
+            icon={
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <input
-                type="text"
-                placeholder="Nombre, email, ID de MP..."
-                value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-64 rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted">Estado</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as StatusFilter)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Todos</option>
-              {(Object.keys(STATUS_LABELS) as Payment['status'][]).map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted">Desde</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted">Hasta</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="rounded-lg border border-border px-3 py-2 text-sm text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </div>
-
-        {/* Tabla */}
-        <Card className="p-0 overflow-hidden">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-24">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          ) : payments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-muted">
-                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-foreground">
-                {hasFilters ? 'Sin resultados para los filtros aplicados' : 'Sin pagos aún'}
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                {hasFilters
-                  ? 'Probá cambiando el rango de fechas o el estado.'
-                  : 'Los pagos recibidos via Mercado Pago aparecen acá en tiempo real.'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-gray-50">
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Estado</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">Monto</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Pagador</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Método</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Fecha</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">ID MP</th>
+            }
+            title={hasFilters ? 'Sin resultados para los filtros aplicados' : 'Sin pagos aún'}
+            description={
+              hasFilters
+                ? 'Probá cambiando el rango de fechas o el estado.'
+                : 'Los pagos recibidos aparecen acá en tiempo real.'
+            }
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Estado</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">Monto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Pagador</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Método</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">ID MP</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {payments.map((p) => (
+                    <tr
+                      key={p.id}
+                      onClick={() => setSelectedPayment(p)}
+                      className={`cursor-pointer transition-colors hover:bg-blue-50 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
+                    >
+                      <td className="px-6 py-4">
+                        <Badge className={STATUS_CLASSES[p.status]}>{STATUS_LABELS[p.status]}</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium text-foreground tabular-nums">
+                        {formatAmount(p.amount, p.currency)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {p.payerName || p.payerEmail ? (
+                          <div>
+                            {p.payerName && <p className="font-medium text-foreground">{p.payerName}</p>}
+                            {p.payerEmail && <p className="text-xs text-muted">{p.payerEmail}</p>}
+                          </div>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-muted">{formatPaymentMethod(p.paymentMethod)}</td>
+                      <td className="px-6 py-4 text-muted whitespace-nowrap">
+                        {formatDate(p.paidAt ?? p.receivedAt)}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs text-muted">{p.mpPaymentId}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {payments.map((p) => (
-                      <tr
-                        key={p.id}
-                        onClick={() => setSelectedPayment(p)}
-                        className={`cursor-pointer transition-colors hover:bg-blue-50 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
-                      >
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[p.status]}`}>
-                            {STATUS_LABELS[p.status]}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-medium text-foreground tabular-nums">
-                          {formatAmount(p.amount, p.currency)}
-                        </td>
-                        <td className="px-6 py-4">
-                          {p.payerName || p.payerEmail ? (
-                            <div>
-                              {p.payerName && <p className="font-medium text-foreground">{p.payerName}</p>}
-                              {p.payerEmail && <p className="text-xs text-muted">{p.payerEmail}</p>}
-                            </div>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-muted">{formatPaymentMethod(p.paymentMethod)}</td>
-                        <td className="px-6 py-4 text-muted whitespace-nowrap">
-                          {formatDate(p.paidAt ?? p.receivedAt)}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs text-muted">{p.mpPaymentId}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-              <div className="flex items-center justify-between border-t border-border px-6 py-4">
-                <p className="text-sm text-muted">
-                  Mostrando <span className="font-medium text-foreground">{payments.length}</span> de{' '}
-                  <span className="font-medium text-foreground">{meta.total}</span> pagos
-                </p>
-                {meta.hasMore && (
-                  <button
-                    onClick={loadMore}
-                    disabled={isLoadingMore}
-                    className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    {isLoadingMore && (
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    )}
-                    Cargar más
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </Card>
+            <div className="flex items-center justify-between border-t border-border px-6 py-4">
+              <p className="text-sm text-muted">
+                Mostrando <span className="font-medium text-foreground">{payments.length}</span> de{' '}
+                <span className="font-medium text-foreground">{meta.total}</span> pagos
+              </p>
+              {meta.hasMore && (
+                <button
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-50"
+                >
+                  {isLoadingMore && <Spinner size="sm" />}
+                  Cargar más
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </Card>
+
       {/* Panel de detalle con AFIP */}
       {selectedPayment && businessId && (
         <DetailPanel

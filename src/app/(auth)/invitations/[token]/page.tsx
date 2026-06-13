@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Spinner } from '@/components/ui/Spinner'
 import { api, ApiError } from '@/lib/api'
 import { saveSession } from '@/lib/auth'
 import type { ApiResponse, User } from '@/types'
@@ -114,7 +115,7 @@ export default function InvitationPage() {
     return (
       <Card>
         <div className="flex flex-col items-center gap-3 py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <Spinner />
           <p className="text-sm text-muted">Cargando invitación...</p>
         </div>
       </Card>
