@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Header } from '@/components/layout/Header'
+import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
@@ -313,9 +313,7 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
-      <Header title="Equipo" />
-      <main className="flex-1 space-y-6 p-6">
+    <PageShell title="Equipo" className="space-y-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -499,8 +497,6 @@ export default function MembersPage() {
             )}
           </>
         )}
-      </main>
-
       {showInvite && businessId && (
         <InviteSlideOver
           businessId={businessId}
@@ -517,6 +513,6 @@ export default function MembersPage() {
           onCancel={() => setRevokeTarget(null)}
         />
       )}
-    </div>
+    </PageShell>
   )
 }

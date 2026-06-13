@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { Header } from '@/components/layout/Header'
+import { PageShell } from '@/components/layout/PageShell'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { api } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
@@ -81,9 +81,7 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
-      <Header title="Dashboard" />
-      <main className="flex-1 p-6">
+    <PageShell title="Dashboard">
 
         {/* Stats cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -221,7 +219,6 @@ export default function DashboardPage() {
           )}
         </Card>
 
-      </main>
-    </div>
+    </PageShell>
   )
 }

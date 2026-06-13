@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Header } from '@/components/layout/Header'
+import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
 import { api } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
@@ -331,9 +331,13 @@ export default function PaymentsPage() {
   const hasFilters = status !== '' || from !== '' || to !== '' || q !== ''
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
-      <Header title="Pagos" />
-      <main className="flex-1 p-6">
+    <PageShell title="Pagos">
+
+        {/* Encabezado de sección */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-foreground">Historial de pagos</h2>
+          <p className="mt-0.5 text-sm text-muted">Todos los pagos recibidos en tu negocio</p>
+        </div>
 
         {/* Búsqueda + Filtros */}
         <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -493,8 +497,6 @@ export default function PaymentsPage() {
             </>
           )}
         </Card>
-      </main>
-
       {/* Panel de detalle con AFIP */}
       {selectedPayment && businessId && (
         <DetailPanel
@@ -503,6 +505,6 @@ export default function PaymentsPage() {
           onClose={() => setSelectedPayment(null)}
         />
       )}
-    </div>
+    </PageShell>
   )
 }

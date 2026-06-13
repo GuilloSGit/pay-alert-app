@@ -60,7 +60,7 @@ function formatAmount(amount: string, currency: string): string {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num)
 }

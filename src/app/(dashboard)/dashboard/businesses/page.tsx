@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Header } from '@/components/layout/Header'
+import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
@@ -160,9 +160,7 @@ export default function BusinessesPage() {
   const skeleton = <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
-      <Header title="Mi Comercio" />
-      <main className="flex-1 p-6 space-y-6">
+    <PageShell title="Mi Comercio" className="space-y-6">
 
         {/* Banner onboarding — visible si el usuario no tiene comercio aún */}
         {!businessId && (
@@ -458,7 +456,6 @@ export default function BusinessesPage() {
           </Card>
         </div>
 
-      </main>
-    </div>
+    </PageShell>
   )
 }
