@@ -64,6 +64,7 @@ export function usePaymentWebSocket(
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data as string) as WsPaymentMessage
+          if (!msg.type?.startsWith('payment.')) return
           onMessageRef.current(msg)
         } catch {}
       }
