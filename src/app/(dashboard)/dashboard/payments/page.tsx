@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
@@ -92,18 +92,14 @@ interface DetailPanelProps {
 }
 
 function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
-  const [afipData, setAfipData] = useState<AfipData | null>(null)
-  const [isLoadingAfip, setIsLoadingAfip] = useState(true)
-
-  useEffect(() => {
-    setIsLoadingAfip(true)
-    setAfipData(null)
-    api
-      .get<{ data: AfipData }>(`/api/v1/businesses/${businessId}/payments/${payment.id}/afip`)
-      .then((res) => setAfipData(res.data))
-      .catch(() => setAfipData({ cuit: null, cuitType: null, afipName: null, available: false }))
-      .finally(() => setIsLoadingAfip(false))
-  }, [payment.id, businessId])
+  const { data: afipData, isLoading: isLoadingAfip } = useQuery({
+    queryKey: ['afip', businessId, payment.id],
+    queryFn: () =>
+      api
+        .get<{ data: AfipData }>(`/api/v1/businesses/${businessId}/payments/${payment.id}/afip`)
+        .then((res) => res.data),
+    retry: false,
+  })
 
   return (
     <>
@@ -243,9 +239,6 @@ function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
 export default function PaymentsPage() {
   const { businessId } = useActiveBusiness()
 
-  const [extraPayments, setExtraPayments] = useState<Payment[]>([])
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const [status, setStatus] = useState<StatusFilter>('')
@@ -283,13 +276,20 @@ export default function PaymentsPage() {
     enabled: !!businessId,
   })
 
-  const error = queryError ? 'No se pudieron cargar los pagos. Intentá de nuevo.' : null
+  const [extraPayments, setExtraPayments] = useState<Payment[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [prevBaseData, setPrevBaseData] = useState(baseData)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  // Resetear páginas extra cuando cambian los filtros o llega un refresh del WS
-  useEffect(() => {
+  // Reset extras when baseData changes (filter change or WS refetch)
+  // "Store info from previous renders" pattern — avoids setState inside a useEffect
+  if (prevBaseData !== baseData) {
+    setPrevBaseData(baseData)
     setExtraPayments([])
     setNextCursor(baseData?.meta.nextCursor ?? null)
-  }, [baseData])
+  }
+
+  const error = queryError ? 'No se pudieron cargar los pagos. Intentá de nuevo.' : null
 
   const payments = [...(baseData?.data ?? []), ...extraPayments]
   const meta = {

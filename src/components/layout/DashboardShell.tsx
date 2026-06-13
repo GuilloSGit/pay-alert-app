@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
@@ -84,6 +84,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const [toasts, setToasts] = useState<PaymentToast[]>([])
   const queryClient = useQueryClient()
+  const pathnameAtMount = useRef(pathname)
 
   const handleWsMessage = useCallback((msg: WsPaymentMessage) => {
     setToasts((prev) => {
@@ -109,12 +110,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           setBusinessId(first.id)
           setBusinessName(first.name)
           setRole(first.role)
-        } else if (pathname !== '/dashboard/businesses') {
+        } else if (pathnameAtMount.current !== '/dashboard/businesses') {
           router.replace('/dashboard/businesses')
         }
       })
       .catch(() => {})
-  }, [])
+  }, [router])
 
   useEffect(() => {
     registerDevice().then((result) => {

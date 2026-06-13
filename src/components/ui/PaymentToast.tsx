@@ -4,10 +4,24 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { WsPaymentEvent, WsPaymentMessage } from '@/lib/use-payment-websocket'
 
+// Singleton — created once, unlocked on first user gesture
+let _audioCtx: AudioContext | null = null
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  if (!_audioCtx) _audioCtx = new AudioContext()
+  return _audioCtx
+}
+
+function unlockAudio() {
+  const ctx = getAudioContext()
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {})
+}
+
 function playCashRegister() {
   try {
-    const ctx = new AudioContext()
-    // Dos "dings" escalonados: el clásico "cha-ching"
+    const ctx = getAudioContext()
+    if (!ctx || ctx.state !== 'running') return
     const notes = [
       { freq: 1400, start: 0,    dur: 0.12 },
       { freq: 1100, start: 0.08, dur: 0.18 },
@@ -118,6 +132,17 @@ export function PaymentToastContainer({
   toasts: PaymentToast[]
   onDismiss: (id: number) => void
 }) {
+  useEffect(() => {
+    document.addEventListener('click', unlockAudio, { capture: true })
+    document.addEventListener('keydown', unlockAudio, { capture: true })
+    document.addEventListener('touchstart', unlockAudio, { capture: true, passive: true })
+    return () => {
+      document.removeEventListener('click', unlockAudio, { capture: true })
+      document.removeEventListener('keydown', unlockAudio, { capture: true })
+      document.removeEventListener('touchstart', unlockAudio, { capture: true })
+    }
+  }, [])
+
   if (toasts.length === 0) return null
 
   return (

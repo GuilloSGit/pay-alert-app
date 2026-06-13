@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { api, ApiError } from '@/lib/api'
@@ -244,11 +245,7 @@ function RevokeModal({ member, isPending, onConfirm, onCancel }: RevokeModalProp
 
 export default function MembersPage() {
   const { businessId, role: currentRole } = useActiveBusiness()
-
-  const [members, setMembers] = useState<BusinessMember[]>([])
-  const [invitations, setInvitations] = useState<PendingInvitation[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const [showInvite, setShowInvite] = useState(false)
   const [revokeTarget, setRevokeTarget] = useState<BusinessMember | null>(null)
@@ -259,41 +256,29 @@ export default function MembersPage() {
   const isOwner = currentRole === 'OWNER'
   const isManager = currentRole === 'OWNER' || currentRole === 'ADMIN'
 
-  const fetchMembers = useCallback(async () => {
-    if (!businessId) return
-    const res = await api.get<{ data: { members: BusinessMember[]; invitations: PendingInvitation[] } }>(
-      `/api/v1/businesses/${businessId}/members`,
-    )
-    return res.data
-  }, [businessId])
+  const { data, isLoading, error: queryError } = useQuery({
+    queryKey: ['members', businessId],
+    queryFn: () =>
+      api
+        .get<{ data: { members: BusinessMember[]; invitations: PendingInvitation[] } }>(
+          `/api/v1/businesses/${businessId}/members`,
+        )
+        .then((r) => r.data),
+    enabled: !!businessId,
+  })
 
-  useEffect(() => {
-    if (!businessId) return
-    setIsLoading(true)
-    setError(null)
-    fetchMembers()
-      .then((data) => {
-        if (!data) return
-        setMembers(data.members)
-        setInvitations(data.invitations)
-      })
-      .catch(() => setError('No se pudieron cargar los miembros. Intentá de nuevo.'))
-      .finally(() => setIsLoading(false))
-  }, [businessId, fetchMembers])
+  const members = data?.members ?? []
+  const invitations = data?.invitations ?? []
+  const error = queryError ? 'No se pudieron cargar los miembros. Intentá de nuevo.' : null
 
   async function handleRoleChange(memberId: string, newRole: BusinessRole) {
     if (!businessId) return
     setChangingRoleId(memberId)
     try {
       await api.put(`/api/v1/businesses/${businessId}/members/${memberId}/role`, { role: newRole })
-      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m)))
+      void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
     } catch {
-      // revert on error
-      const data = await fetchMembers()
-      if (data) {
-        setMembers(data.members)
-        setInvitations(data.invitations)
-      }
+      // data stays unchanged on error
     } finally {
       setChangingRoleId(null)
     }
@@ -304,8 +289,8 @@ export default function MembersPage() {
     setIsRevoking(true)
     try {
       await api.delete(`/api/v1/businesses/${businessId}/members/${revokeTarget.id}`)
-      setMembers((prev) => prev.filter((m) => m.id !== revokeTarget.id))
       setRevokeTarget(null)
+      void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
     } finally {
       setIsRevoking(false)
     }
@@ -316,7 +301,7 @@ export default function MembersPage() {
     setCancellingInvId(invId)
     try {
       await api.delete(`/api/v1/businesses/${businessId}/invitations/${invId}`)
-      setInvitations((prev) => prev.filter((inv) => inv.id !== invId))
+      void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
     } finally {
       setCancellingInvId(null)
     }
@@ -324,13 +309,7 @@ export default function MembersPage() {
 
   function handleInviteSuccess() {
     setShowInvite(false)
-    fetchMembers()
-      .then((data) => {
-        if (!data) return
-        setMembers(data.members)
-        setInvitations(data.invitations)
-      })
-      .catch(() => {})
+    void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
   }
 
   return (

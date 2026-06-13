@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { getAccessToken } from './auth'
 import { tryRefresh } from './api'
 
@@ -38,7 +38,9 @@ export function usePaymentWebSocket(
   onMessage: (msg: WsPaymentMessage) => void,
 ) {
   const onMessageRef = useRef(onMessage)
-  onMessageRef.current = onMessage
+  useLayoutEffect(() => {
+    onMessageRef.current = onMessage
+  })
 
   useEffect(() => {
     if (!enabled) return

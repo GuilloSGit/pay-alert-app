@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { getUser } from '@/lib/auth'
 import type { User } from '@/types'
 
@@ -9,11 +9,14 @@ interface HeaderProps {
 }
 
 export function Header({ title }: HeaderProps) {
-  const [user, setUser] = useState<User | null>(null)
-
-  useEffect(() => {
-    setUser(getUser())
-  }, [])
+  const user = useSyncExternalStore<User | null>(
+    (cb) => {
+      window.addEventListener('storage', cb)
+      return () => window.removeEventListener('storage', cb)
+    },
+    () => getUser(),
+    () => null,
+  )
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
