@@ -139,11 +139,26 @@ Las páginas consumen `useBusinessContext()` — no llaman a `/businesses` ellas
 | `/dashboard/members` | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
 | `/dashboard/settings` (pendiente) | `PUT /users/me` · `POST /auth/change-password` (BE pendiente) · `GET/PUT /businesses/:id/notification-rules` (BE pendiente) · `GET/DELETE /users/me/devices` (BE pendiente) |
 
+### TanStack Query v5 — patrón de datos
+
+`ReactQueryProvider` en `src/lib/query-client.tsx` wrappea toda la app en `layout.tsx`.
+
+| Página / componente | `queryKey` | Cuándo refetch |
+|---|---|---|
+| `/dashboard` | `['summary', businessId]` | `refetchQueries` al recibir WS message |
+| `/dashboard/payments` | `['payments', businessId, status, from, to, q]` | `refetchQueries` al recibir WS message |
+| `/dashboard/members` | `['members', businessId]` | `invalidateQueries` luego de cada mutación |
+| `DetailPanel` (AFIP) | `['afip', businessId, paymentId]` | Al abrir el panel (por `payment.id`) |
+
+- `DashboardShell.handleWsMessage` llama `refetchQueries` (no `invalidateQueries`) para forzar refetch inmediato aunque los datos no estén stale.
+- Las mutaciones de members usan `queryClient.invalidateQueries({ queryKey: ['members', businessId] })` y confían en el refetch para actualizar la UI.
+
 ### WebSocket tiempo real
 
 `DashboardShell` conecta automáticamente al WebSocket (`/api/v1/ws?token=<jwt>`) cuando el `businessId` está disponible.
-- Hook: `src/lib/use-payment-websocket.ts` — reconexión con exponential backoff (1s→30s)
-- Toast: `src/components/ui/PaymentToast.tsx` — stack bottom-right, max 3, auto-dismiss 5s, sonido "cha-ching" en `payment.received` / `payment.approved`
+- Hook: `src/lib/use-payment-websocket.ts` — reconexión con exponential backoff (1s→30s). Actualiza el ref del callback con `useLayoutEffect` sin deps para evitar closures stale.
+- Toast: `src/components/ui/PaymentToast.tsx` — stack bottom-right, max 3, auto-dismiss 5s
+- **Sonido:** AudioContext singleton en `PaymentToast.tsx`. Se crea una sola vez y se desbloquea en el primer gesto del usuario (`click`/`keydown`/`touchstart`). Registrado en `PaymentToastContainer` via `useEffect`. No crear `new AudioContext()` en cada llamada — el browser lo bloquea por autoplay policy.
 - WS URL: `NEXT_PUBLIC_WS_URL` (ver env vars) — **no** usar `NEXT_PUBLIC_API_URL` para WS en local
 - Endpoint de prueba local: `POST /dev/test-notify` (requiere Bearer JWT)
 

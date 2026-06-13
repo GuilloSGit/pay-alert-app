@@ -7,10 +7,18 @@ const SESSION_COOKIE = 'pa_session'
 // Se pierde al recargar la página; api.ts lo refresca automáticamente via /auth/refresh.
 let accessToken: string | null = null
 
+// Cache para getUser(): evita crear un objeto nuevo en cada llamada a getSnapshot
+// de useSyncExternalStore, lo que causaría un loop infinito de re-renders.
+let _cachedRaw: string | null | undefined = undefined
+let _cachedUser: User | null = null
+
 export function saveSession(token: string, user: User): void {
   accessToken = token
   if (typeof window === 'undefined') return
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
+  const serialized = JSON.stringify(user)
+  _cachedRaw = serialized
+  _cachedUser = user
+  localStorage.setItem(USER_KEY, serialized)
   // Indicador no sensible para que el middleware de Next.js sepa que hay sesión.
   // La seguridad real la provee la httpOnly cookie `refresh_token` del backend.
   document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Strict${
@@ -29,16 +37,20 @@ export function setAccessToken(token: string): void {
 export function getUser(): User | null {
   if (typeof window === 'undefined') return null
   const raw = localStorage.getItem(USER_KEY)
-  if (!raw) return null
+  if (raw === _cachedRaw) return _cachedUser
+  _cachedRaw = raw
   try {
-    return JSON.parse(raw) as User
+    _cachedUser = raw ? (JSON.parse(raw) as User) : null
   } catch {
-    return null
+    _cachedUser = null
   }
+  return _cachedUser
 }
 
 export function clearSession(): void {
   accessToken = null
+  _cachedRaw = null
+  _cachedUser = null
   if (typeof window === 'undefined') return
   localStorage.removeItem(USER_KEY)
   document.cookie = `${SESSION_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
