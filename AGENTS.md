@@ -104,6 +104,32 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 
 ---
 
+## Biblioteca de componentes UI propios
+
+### src/components/ui/
+| Componente | Props clave | Notas |
+|---|---|---|
+| `Button` | `variant`, `size`, `loading`, `disabled` | primary/secondary/ghost/danger |
+| `Input` | `label`, `error` | con estados disabled |
+| `Card` | — | Card + CardHeader + CardTitle + CardDescription |
+| `Spinner` | `size?: 'sm'\|'md'`, `className` | color override via className (default `border-primary`) |
+| `Badge` | `className` | pill inline-flex; color completamente via className |
+| `EmptyState` | `size?: 'sm'\|'default'`, `icon`, `title`, `description`, `className` | — |
+| `SlideOver` | `title`, `subtitle`, `subtitleClassName`, `onClose`, `children` | panel fixed right |
+| `ConfirmDialog` | `iconBgClass`, `confirmClassName`, `pendingLabel`, `closeOnBackdrop`, `description: ReactNode` | description es div (admite strong) |
+| `StatCard` | `title`, `isLoading`, `caption`, `children` | skeleton animado cuando isLoading |
+| `PaymentToast` / `PaymentToastContainer` | — | stack bottom-right, max 3, auto-dismiss 5s, sonido |
+
+### src/components/layout/
+| Componente | Descripción |
+|---|---|
+| `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main p-6. Usar en todas las páginas del dashboard. |
+| `Header` | `{ title }` — h-16 **shrink-0** (sin esto se comprime en flex column) |
+| `Sidebar` | Nav items filtrados por rol. Para agregar página: `exists: false → true` en `NAV_ITEMS` |
+| `DashboardShell` | BusinessContext provider + DeviceLimitModal (ConfirmDialog) + PaymentToastContainer |
+
+---
+
 ## Estado actual del proyecto
 
 ### Páginas implementadas
