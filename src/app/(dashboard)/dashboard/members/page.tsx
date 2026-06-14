@@ -186,8 +186,10 @@ export default function MembersPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [revokeTarget, setRevokeTarget] = useState<BusinessMember | null>(null)
   const [isRevoking, setIsRevoking] = useState(false)
+  const [revokeError, setRevokeError] = useState<string | null>(null)
   const [cancellingInvId, setCancellingInvId] = useState<string | null>(null)
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const isOwner = currentRole === 'OWNER'
   const isManager = currentRole === 'OWNER' || currentRole === 'ADMIN'
@@ -210,11 +212,12 @@ export default function MembersPage() {
   async function handleRoleChange(memberId: string, newRole: BusinessRole) {
     if (!businessId) return
     setChangingRoleId(memberId)
+    setActionError(null)
     try {
       await api.put(`/api/v1/businesses/${businessId}/members/${memberId}/role`, { role: newRole })
       void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
     } catch {
-      // data stays unchanged on error
+      setActionError('No se pudo cambiar el rol. Intentá de nuevo.')
     } finally {
       setChangingRoleId(null)
     }
@@ -223,10 +226,13 @@ export default function MembersPage() {
   async function handleRevoke() {
     if (!businessId || !revokeTarget) return
     setIsRevoking(true)
+    setRevokeError(null)
     try {
       await api.delete(`/api/v1/businesses/${businessId}/members/${revokeTarget.id}`)
       setRevokeTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
+    } catch {
+      setRevokeError('No se pudo revocar el acceso. Intentá de nuevo.')
     } finally {
       setIsRevoking(false)
     }
@@ -235,9 +241,12 @@ export default function MembersPage() {
   async function handleCancelInvitation(invId: string) {
     if (!businessId) return
     setCancellingInvId(invId)
+    setActionError(null)
     try {
       await api.delete(`/api/v1/businesses/${businessId}/invitations/${invId}`)
       void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
+    } catch {
+      setActionError('No se pudo cancelar la invitación. Intentá de nuevo.')
     } finally {
       setCancellingInvId(null)
     }
@@ -260,6 +269,15 @@ export default function MembersPage() {
         </div>
       ) : (
         <>
+          {actionError && (
+            <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <span>{actionError}</span>
+              <button onClick={() => setActionError(null)} className="ml-4 font-medium underline hover:no-underline">
+                Cerrar
+              </button>
+            </div>
+          )}
+
           {/* Resumen + botón invitar */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted">
@@ -427,9 +445,15 @@ export default function MembersPage() {
           confirmLabel="Revocar acceso"
           pendingLabel="Revocando..."
           onConfirm={handleRevoke}
-          onCancel={() => setRevokeTarget(null)}
+          onCancel={() => { setRevokeTarget(null); setRevokeError(null) }}
           isPending={isRevoking}
-        />
+        >
+          {revokeError && (
+            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {revokeError}
+            </p>
+          )}
+        </ConfirmDialog>
       )}
     </PageShell>
   )
