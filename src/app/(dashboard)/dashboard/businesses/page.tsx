@@ -56,7 +56,7 @@ function formatDate(dateStr: string | null | undefined) {
 }
 
 export default function BusinessesPage() {
-  const { businessId, role } = useActiveBusiness()
+  const { businessId, businessName, role } = useActiveBusiness()
   const isOwner = role === 'OWNER'
   const isManager = role === 'OWNER' || role === 'ADMIN'
 
@@ -162,7 +162,7 @@ export default function BusinessesPage() {
   const skeleton = <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
 
   return (
-    <PageShell title="Mi Comercio" className="space-y-6">
+    <PageShell title={businessName ?? 'Mi Comercio'} className="space-y-6">
 
         {/* Banner onboarding — visible si el usuario no tiene comercio aún */}
         {!businessId && (

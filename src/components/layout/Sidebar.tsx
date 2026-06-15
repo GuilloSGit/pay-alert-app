@@ -50,7 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/dashboard/businesses',
-    label: 'Comercios',
+    label: 'Mi Comercio',
     roles: MANAGER_ROLES,
     exists: true,
     icon: (
