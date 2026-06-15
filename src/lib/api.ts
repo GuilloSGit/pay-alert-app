@@ -36,8 +36,11 @@ export async function tryRefresh(): Promise<boolean> {
 async function request<T>(path: string, options: FetchOptions = {}, isRetry = false): Promise<T> {
   const { skipAuth, ...fetchOptions } = options
 
+  const method = (fetchOptions.method ?? 'GET').toUpperCase()
+  const hasBody = method !== 'GET' && method !== 'DELETE' && method !== 'HEAD'
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(fetchOptions.headers as Record<string, string>),
   }
 
