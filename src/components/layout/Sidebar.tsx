@@ -1,22 +1,29 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearSession } from '@/lib/auth'
+import { useActiveBusiness } from '@/lib/business-context'
 import type { BusinessRole } from '@/types'
 
 type NavItem = {
   href: string
   label: string
-  // Roles que pueden ver esta ruta. null = sin restricción de rol (ruta pública del dashboard).
   roles: readonly BusinessRole[]
-  // false = página aún no implementada, no se renderiza aunque el rol lo permita.
   exists: boolean
   icon: React.ReactNode
 }
 
 const ALL_ROLES = ['OWNER', 'ADMIN', 'MEMBER', 'OBSERVER'] as const satisfies readonly BusinessRole[]
 const MANAGER_ROLES = ['OWNER', 'ADMIN'] as const satisfies readonly BusinessRole[]
+
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Dueño',
+  ADMIN: 'Administrador',
+  MEMBER: 'Empleado',
+  OBSERVER: 'Observador',
+}
 
 const NAV_ITEMS: NavItem[] = [
   {
@@ -77,11 +84,86 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
 
-interface SidebarProps {
-  role: BusinessRole | null
+// ─── Business Switcher ────────────────────────────────────────────────────────
+
+function BusinessSwitcher() {
+  const { businessId, businessName, businesses, switchBusiness } = useActiveBusiness()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
+  if (!businessName) return null
+
+  const canSwitch = businesses.length > 1
+
+  return (
+    <div ref={ref} className="relative border-b border-border px-3 py-2">
+      <button
+        onClick={() => canSwitch && setOpen((o) => !o)}
+        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors ${canSwitch ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-default'}`}
+      >
+        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+          {businessName.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{businessName}</p>
+        </div>
+        {canSwitch && (
+          <svg
+            className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+          {businesses.map((b) => {
+            const active = b.id === businessId
+            return (
+              <button
+                key={b.id}
+                onClick={() => { switchBusiness(b.id); setOpen(false) }}
+                className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${active ? 'bg-primary-light' : 'hover:bg-gray-50'}`}
+              >
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+                  {b.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`truncate text-sm font-medium ${active ? 'text-primary' : 'text-foreground'}`}>
+                    {b.name}
+                  </p>
+                  <p className="text-xs text-muted">{ROLE_LABELS[b.role]}</p>
+                </div>
+                {active && (
+                  <svg className="h-4 w-4 flex-shrink-0 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
-export function Sidebar({ role }: SidebarProps) {
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+export function Sidebar() {
+  const { role } = useActiveBusiness()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -104,6 +186,8 @@ export function Sidebar({ role }: SidebarProps) {
         </div>
         <span className="text-base font-semibold text-foreground">Pay Alert</span>
       </div>
+
+      <BusinessSwitcher />
 
       <nav className="flex flex-1 flex-col gap-1 p-3">
         {visibleItems.map((item) => {
