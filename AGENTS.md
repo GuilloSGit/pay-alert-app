@@ -56,6 +56,15 @@ RUN npm run build
 3. Verificar que `roles` sea correcto (jerarquía: OWNER > ADMIN > MEMBER > OBSERVER)
 La página solo aparece en el sidebar cuando `exists: true` Y el rol del usuario está en `roles`.
 
+### Sidebar — BusinessSwitcher (multi-comercio)
+El `Sidebar` incluye un componente `BusinessSwitcher` al tope:
+- Muestra el nombre del comercio activo con avatar (primera letra)
+- Si `businesses.length > 1`: muestra chevron y dropdown con todos los comercios
+- Cada opción del dropdown muestra nombre + etiqueta de rol en español + checkmark en el activo
+- Al seleccionar: llama `switchBusiness(id)` → `queryClient.clear()` → redirect `/dashboard`
+- Cierra con click fuera (listener `mousedown` en `useEffect` con `useRef<HTMLDivElement>`)
+- El `Sidebar` ya no recibe `role` como prop — usa `useActiveBusiness()` directamente
+
 ### `output: 'standalone'` — solo para Docker
 `next.config.ts` puede tener `output: 'standalone'` para builds Docker multi-stage.
 **No es necesario para Vercel** (el deploy actual usa Vercel, que ignora esta opción).
@@ -125,8 +134,8 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 |---|---|
 | `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main p-6. Usar en todas las páginas del dashboard. |
 | `Header` | `{ title }` — h-16 **shrink-0** (sin esto se comprime en flex column) |
-| `Sidebar` | Nav items filtrados por rol. Para agregar página: `exists: false → true` en `NAV_ITEMS` |
-| `DashboardShell` | BusinessContext provider + DeviceLimitModal (ConfirmDialog) + PaymentToastContainer |
+| `Sidebar` | Nav items filtrados por rol + BusinessSwitcher al tope. Usa `useActiveBusiness()` directamente (sin prop de rol). Para agregar página: `exists: false → true` en `NAV_ITEMS` |
+| `DashboardShell` | BusinessContext provider (con `businesses[]` + `switchBusiness()`) + DeviceLimitModal (ConfirmDialog) + PaymentToastContainer |
 
 ---
 
@@ -150,10 +159,12 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 
 ### BusinessContext — patrón central de datos
 `DashboardShell` (`src/components/layout/DashboardShell.tsx`) hace `GET /businesses` al montar
-y expone `{ businessId, businessName, role }` via React Context a todas las páginas del dashboard.
-Las páginas consumen `useBusinessContext()` — no llaman a `/businesses` ellas mismas.
+y expone `{ businessId, businessName, role, businesses[], switchBusiness() }` via React Context.
+Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ellas mismas.
 
-**Limitación actual:** solo se usa `res.data[0]`. Multi-business selector es deuda técnica.
+**Multi-business:** `switchBusiness(id)` cambia el negocio activo, llama `queryClient.clear()` para vaciar todo el caché y redirige a `/dashboard`. La interfaz `BusinessBrief = { id, name, role }` vive en `src/lib/business-context.tsx`.
+
+**Visibilidad de cards por rol:** en `/dashboard`, las cards "Miembros activos" y "Suscripción" solo se muestran si `isManager = role === 'OWNER' || role === 'ADMIN'`. El grid adapta columnas: 4 columnas para managers, 2 para el resto. La card "Pagos recibidos hoy" y "Total del mes" son visibles para todos los roles.
 
 ### Backend que consume cada página
 
