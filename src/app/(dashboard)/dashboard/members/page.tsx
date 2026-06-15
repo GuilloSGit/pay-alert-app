@@ -231,8 +231,21 @@ export default function MembersPage() {
       await api.delete(`/api/v1/businesses/${businessId}/members/${revokeTarget.id}`)
       setRevokeTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
-    } catch {
-      setRevokeError('No se pudo revocar el acceso. Intentá de nuevo.')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
+          setRevokeError('Este miembro ya no está activo. Recargá la página para ver el estado actualizado.')
+          void queryClient.invalidateQueries({ queryKey: ['members', businessId] })
+        } else if (err.status === 403) {
+          setRevokeError('Sin permisos para revocar miembros en este comercio.')
+        } else if (err.status === 402) {
+          setRevokeError('Suscripción inactiva. No es posible realizar esta acción.')
+        } else {
+          setRevokeError(`No se pudo revocar el acceso. (${err.status})`)
+        }
+      } else {
+        setRevokeError('No se pudo revocar el acceso. Intentá de nuevo.')
+      }
     } finally {
       setIsRevoking(false)
     }
