@@ -43,6 +43,9 @@ RUN npm run build
 - **Refresh token:** httpOnly cookie gestionada 100% por el backend. Nunca accederla desde JS.
 - **Indicador de sesión:** cookie `pa_session=1` (no httpOnly), seteada por el FE al login y leída por `src/proxy.ts` para proteger rutas del dashboard.
 - **Nunca** guardar JWTs en `localStorage`.
+- **User en `localStorage`:** `saveSession(token, user)` guarda `{ id, email, name }` en `localStorage[pa_user]` al login. El Header lo lee via `useSyncExternalStore + getUser()`.
+- **`updateUser(patch)`:** actualiza `localStorage` y dispara `StorageEvent` manualmente → el Header re-renderiza sin recargar. Llamar siempre que se edite el perfil del usuario. **Trampa:** el evento `storage` nativo solo se dispara entre tabs; para el mismo tab hay que despacharlo con `window.dispatchEvent(new StorageEvent('storage', { key, newValue }))`.
+
 
 ### API client (`src/lib/api.ts`)
 - `BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'`
