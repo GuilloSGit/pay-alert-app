@@ -84,8 +84,8 @@ export default function DashboardPage() {
     <PageShell title="Dashboard">
 
       {/* Stats cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard label="Pagos hoy" caption="aprobados" isLoading={isLoading}>
+      <div className={`grid gap-4 mb-6 ${isManager ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2'}`}>
+        <StatCard label="Pagos recibidos hoy" caption="aprobados" isLoading={isLoading}>
           <p className="text-2xl font-bold text-foreground">{summary?.paymentsToday ?? 0}</p>
         </StatCard>
 
@@ -99,40 +99,36 @@ export default function DashboardPage() {
           </p>
         </StatCard>
 
-        <StatCard
-          label="Miembros activos"
-          caption={isManager ? 'en este comercio' : 'sin acceso'}
-          isLoading={isLoading}
-        >
-          {isManager ? (
+        {isManager && (
+          <StatCard label="Miembros activos" caption="en este comercio" isLoading={isLoading}>
             <p className="text-2xl font-bold text-foreground">{summary?.activeMembers ?? '—'}</p>
-          ) : (
-            <p className="text-2xl font-bold text-muted">—</p>
-          )}
-        </StatCard>
+          </StatCard>
+        )}
 
-        <StatCard label="Suscripción" isLoading={isLoading}>
-          {role === 'OWNER' ? (
-            summary?.subscription ? (
-              <>
-                <p className="text-lg font-bold text-foreground leading-tight">
-                  {summary.subscription.planName}
-                </p>
-                <Badge className={`mt-1 w-fit px-2 ${
-                  summary.subscription.status === 'ACTIVE' || summary.subscription.status === 'TRIALING'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {SUBSCRIPTION_STATUS_LABELS[summary.subscription.status] ?? summary.subscription.status}
-                </Badge>
-              </>
+        {isManager && (
+          <StatCard label="Suscripción" isLoading={isLoading}>
+            {role === 'OWNER' ? (
+              summary?.subscription ? (
+                <>
+                  <p className="text-lg font-bold text-foreground leading-tight">
+                    {summary.subscription.planName}
+                  </p>
+                  <Badge className={`mt-1 w-fit px-2 ${
+                    summary.subscription.status === 'ACTIVE' || summary.subscription.status === 'TRIALING'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {SUBSCRIPTION_STATUS_LABELS[summary.subscription.status] ?? summary.subscription.status}
+                  </Badge>
+                </>
+              ) : (
+                <p className="text-sm text-muted">Sin plan activo</p>
+              )
             ) : (
-              <p className="text-sm text-muted">Sin plan activo</p>
-            )
-          ) : (
-            <p className="text-2xl font-bold text-muted">—</p>
-          )}
-        </StatCard>
+              <p className="text-sm text-muted">Solo el dueño puede verla</p>
+            )}
+          </StatCard>
+        )}
       </div>
 
       {/* Últimos pagos — todos los roles */}
