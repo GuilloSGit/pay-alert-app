@@ -47,6 +47,19 @@ export function getUser(): User | null {
   return _cachedUser
 }
 
+export function updateUser(patch: Partial<User>): void {
+  if (typeof window === 'undefined') return
+  const current = getUser()
+  if (!current) return
+  const updated = { ...current, ...patch }
+  const serialized = JSON.stringify(updated)
+  _cachedRaw = serialized
+  _cachedUser = updated
+  localStorage.setItem(USER_KEY, serialized)
+  // storage event solo se dispara entre tabs; despacharlo manualmente para el mismo tab
+  window.dispatchEvent(new StorageEvent('storage', { key: USER_KEY, newValue: serialized }))
+}
+
 export function clearSession(): void {
   accessToken = null
   _cachedRaw = null

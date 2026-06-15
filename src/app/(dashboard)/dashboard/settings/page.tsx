@@ -9,6 +9,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api, ApiError } from '@/lib/api'
+import { updateUser } from '@/lib/auth'
 
 interface Device {
   id: string
@@ -91,6 +92,7 @@ function ProfileSection() {
     try {
       await api.put('/api/v1/users/me', { name: name.trim() })
       void queryClient.invalidateQueries({ queryKey: ['me'] })
+      updateUser({ name: name.trim() })
       setSuccess(true)
     } catch {
       setError('No se pudo guardar el nombre. Intentá de nuevo.')
