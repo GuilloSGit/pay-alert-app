@@ -56,6 +56,13 @@ RUN npm run build
 3. Verificar que `roles` sea correcto (jerarquía: OWNER > ADMIN > MEMBER > OBSERVER)
 La página solo aparece en el sidebar cuando `exists: true` Y el rol del usuario está en `roles`.
 
+### Separación Settings vs Mi Comercio (decisión de UX)
+
+- **`/dashboard/businesses` ("Mi Comercio")** → todo sobre el negocio *activo*: nombre, MP, suscripción. El título del page usa `businessName` del contexto. NO tiene botón para crear otro negocio.
+- **`/dashboard/settings` ("Configuración")** → config del *usuario*: perfil, contraseña, dispositivos. Aquí también vivirá "Mis comercios" (lista + crear nuevo) cuando se implemente.
+- El nav item "Comercios" se renombró a **"Mi Comercio"** para reflejar que muestra solo el activo.
+- Settings es visible para **ALL_ROLES** — perfil/contraseña/dispositivos son configuración personal, no de negocio.
+
 ### Sidebar — BusinessSwitcher (multi-comercio)
 El `Sidebar` incluye un componente `BusinessSwitcher` al tope:
 - Muestra el nombre del comercio activo con avatar (primera letra)
@@ -152,9 +159,9 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/reset-password/[token]` | `src/app/(auth)/reset-password/[token]/page.tsx` | ✅ |
 | `/dashboard` | `src/app/(dashboard)/dashboard/page.tsx` | ✅ Stats + últimos pagos |
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
-| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP, suscripción + banner onboarding |
+| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio (título dinámico = businessName), MP, suscripción + banner onboarding |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
-| `/dashboard/settings` | — | ⬜ pendiente |
+| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + cambio de contraseña + dispositivos FCM |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
 
 ### BusinessContext — patrón central de datos
@@ -174,7 +181,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ellas 
 | `/dashboard/payments` | `GET /businesses/:id/payments` · `GET /businesses/:id/payments/:id` · `GET /businesses/:id/payments/:id/afip` |
 | `/dashboard/businesses` | `GET /businesses/:id` · `GET /businesses/:id/mp-connect` · `GET /businesses/:id/summary` |
 | `/dashboard/members` | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
-| `/dashboard/settings` (pendiente) | `PUT /users/me` · `POST /auth/change-password` (BE pendiente) · `GET/PUT /businesses/:id/notification-rules` (BE pendiente) · `GET/DELETE /users/me/devices` (BE pendiente) |
+| `/dashboard/settings` | `GET /users/me` · `PUT /users/me` · `POST /auth/change-password` · `GET /users/me/devices` · `DELETE /users/me/devices/:id` |
 
 ### TanStack Query v5 — patrón de datos
 
@@ -186,6 +193,8 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ellas 
 | `/dashboard/payments` | `['payments', businessId, status, from, to, q]` | `refetchQueries` al recibir WS message |
 | `/dashboard/members` | `['members', businessId]` | `invalidateQueries` luego de cada mutación |
 | `DetailPanel` (AFIP) | `['afip', businessId, paymentId]` | Al abrir el panel (por `payment.id`) |
+| `/dashboard/settings` (perfil) | `['me']` | `invalidateQueries` tras PUT exitoso |
+| `/dashboard/settings` (devices) | `['devices']` | `invalidateQueries` tras DELETE exitoso |
 
 - `DashboardShell.handleWsMessage` llama `refetchQueries` (no `invalidateQueries`) para forzar refetch inmediato aunque los datos no estén stale.
 - Las mutaciones de members usan `queryClient.invalidateQueries({ queryKey: ['members', businessId] })` y confían en el refetch para actualizar la UI.
