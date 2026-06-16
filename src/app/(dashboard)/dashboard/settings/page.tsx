@@ -687,6 +687,212 @@ function BusinessesSection() {
   )
 }
 
+// ─── Sección MP Connect ───────────────────────────────────────────────────────
+
+interface MpConnection {
+  mpUserId: string
+  isActive: boolean
+  connectedAt: string
+  lastVerifiedAt: string | null
+}
+
+function MpConnectSection() {
+  const { businessId, role } = useActiveBusiness()
+  const queryClient = useQueryClient()
+  const isOwner = role === 'OWNER'
+
+  const [token, setToken] = useState('')
+  const [isPending, setIsPending] = useState(false)
+  const [connectError, setConnectError] = useState<string | null>(null)
+  const [connectSuccess, setConnectSuccess] = useState(false)
+  const [showDisconnect, setShowDisconnect] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
+  const [disconnectError, setDisconnectError] = useState<string | null>(null)
+
+  const { data: connection, isLoading } = useQuery({
+    queryKey: ['mp-connect', businessId],
+    queryFn: () =>
+      api
+        .get<ApiResponse<MpConnection | null>>(`/api/v1/businesses/${businessId}/mp-connect`)
+        .then((r) => r.data),
+    enabled: !!businessId,
+  })
+
+  async function handleConnect(e: React.FormEvent) {
+    e.preventDefault()
+    if (!token.trim()) return
+    setConnectError(null)
+    setConnectSuccess(false)
+    setIsPending(true)
+    try {
+      await api.post(`/api/v1/businesses/${businessId}/mp-connect`, { accessToken: token.trim() })
+      setToken('')
+      setConnectSuccess(true)
+      void queryClient.invalidateQueries({ queryKey: ['mp-connect', businessId] })
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'INVALID_MP_TOKEN') {
+        setConnectError('El token es inválido o no tiene los permisos necesarios. Verificá que sea el Access Token de producción.')
+      } else if (err instanceof ApiError && err.code === 'MP_ACCOUNT_ALREADY_CONNECTED') {
+        setConnectError(err.message)
+      } else {
+        setConnectError('No se pudo conectar la cuenta. Intentá de nuevo.')
+      }
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  async function handleDisconnect() {
+    setIsDisconnecting(true)
+    setDisconnectError(null)
+    try {
+      await api.delete(`/api/v1/businesses/${businessId}/mp-connect`)
+      void queryClient.invalidateQueries({ queryKey: ['mp-connect', businessId] })
+      setShowDisconnect(false)
+    } catch {
+      setDisconnectError('No se pudo desconectar. Intentá de nuevo.')
+    } finally {
+      setIsDisconnecting(false)
+    }
+  }
+
+  const isConnected = !!connection && connection.isActive
+  const isTokenExpired = !!connection && !connection.isActive
+
+  return (
+    <div id="mp-connect">
+      <Card>
+        <CardHeader>
+          <CardTitle>Conexión con Mercado Pago</CardTitle>
+          <CardDescription>Token de acceso para recibir notificaciones de pagos en tiempo real.</CardDescription>
+        </CardHeader>
+
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-2">
+            <Spinner size="sm" />
+            <span className="text-sm text-muted">Cargando...</span>
+          </div>
+        ) : isConnected ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Cuenta conectada</p>
+                <p className="text-xs text-muted">ID MP: {connection.mpUserId}</p>
+                <p className="text-xs text-muted">Desde el {formatDate(connection.connectedAt)}</p>
+              </div>
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Activo
+              </span>
+            </div>
+            {isOwner && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowDisconnect(true)}
+                  className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  Desconectar cuenta
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {isTokenExpired && (
+              <p className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                El token venció o fue revocado. Ingresá uno nuevo para restablecer la conexión.
+              </p>
+            )}
+
+            {isOwner ? (
+              <form onSubmit={handleConnect} className="flex flex-col gap-4">
+                <PasswordInput
+                  id="mp-access-token"
+                  label="Access Token de Mercado Pago"
+                  value={token}
+                  onChange={(e) => { setToken(e.target.value); setConnectError(null); setConnectSuccess(false) }}
+                  placeholder="APP_USR-..."
+                  required
+                />
+                <p className="text-xs text-muted">
+                  Obtené tu token en{' '}
+                  <a
+                    href="https://www.mercadopago.com.ar/developers/panel/app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    Mercado Pago Developers
+                  </a>
+                  {' '}→ Tu aplicación → Credenciales de producción → Access Token.
+                </p>
+
+                {connectError && (
+                  <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {connectError}
+                  </p>
+                )}
+                {connectSuccess && (
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    Cuenta de Mercado Pago conectada correctamente.
+                  </p>
+                )}
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isPending || !token.trim()}
+                    className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isPending ? (
+                      <span className="flex items-center gap-2">
+                        <Spinner size="sm" className="border-white" />
+                        Verificando...
+                      </span>
+                    ) : isTokenExpired ? (
+                      'Reconectar'
+                    ) : (
+                      'Conectar'
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="text-sm text-muted">
+                {isTokenExpired
+                  ? 'La conexión con Mercado Pago está interrumpida. Contactá al propietario del comercio.'
+                  : 'No hay ninguna cuenta de Mercado Pago conectada a este comercio.'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {showDisconnect && (
+          <ConfirmDialog
+            title="Desconectar Mercado Pago"
+            description="Dejará de recibirse notificaciones de pagos hasta que vuelvas a conectar una cuenta."
+            icon={
+              <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            }
+            confirmLabel="Desconectar"
+            pendingLabel="Desconectando..."
+            onConfirm={handleDisconnect}
+            onCancel={() => { setShowDisconnect(false); setDisconnectError(null) }}
+            isPending={isDisconnecting}
+          >
+            {disconnectError && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {disconnectError}
+              </p>
+            )}
+          </ConfirmDialog>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 // ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -694,6 +900,7 @@ export default function SettingsPage() {
     <PageShell title="Configuración" className="space-y-6">
       <div className="max-w-2xl space-y-6">
         <BusinessesSection />
+        <MpConnectSection />
         <SubscriptionSection />
         <ProfileSection />
         <SecuritySection />

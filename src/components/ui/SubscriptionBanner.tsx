@@ -31,7 +31,7 @@ export function SubscriptionBanner({ status, trialEndsAt, subscriptionWarning, r
         </p>
         {isOwner && (
           <Link
-            href="/dashboard/settings"
+            href="/dashboard/settings#mp-connect"
             className="shrink-0 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             Reconectar →
