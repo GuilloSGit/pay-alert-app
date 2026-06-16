@@ -71,6 +71,20 @@ async function request<T>(path: string, options: FetchOptions = {}, isRetry = fa
 
   const body = await res.json().catch(() => ({}))
 
+  if (res.status === 402 && !skipAuth) {
+    if ((body as { code?: string }).code === 'SUBSCRIPTION_INACTIVE' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('subscription:inactive'))
+    }
+    throw new ApiError(402, (body as { code?: string }).code ?? 'SUBSCRIPTION_INACTIVE', (body as { error?: string }).error ?? 'Suscripción inactiva')
+  }
+
+  if (res.ok) {
+    const warning = res.headers.get('X-Subscription-Warning')
+    if (warning && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('subscription:warning', { detail: warning }))
+    }
+  }
+
   if (!res.ok) {
     throw new ApiError(res.status, body.code ?? 'UNKNOWN_ERROR', body.error ?? 'Error desconocido', body.data)
   }

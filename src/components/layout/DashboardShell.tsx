@@ -5,10 +5,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SubscriptionBanner } from '@/components/ui/SubscriptionBanner'
+import { SubscriptionGate } from '@/components/ui/SubscriptionGate'
 import { api } from '@/lib/api'
 import { registerDevice } from '@/lib/device'
 import { BusinessContext } from '@/lib/business-context'
-import type { BusinessBrief } from '@/lib/business-context'
+import type { BusinessBrief, SubscriptionStatus } from '@/lib/business-context'
 import { usePaymentWebSocket } from '@/lib/use-payment-websocket'
 import { PaymentToastContainer } from '@/components/ui/PaymentToast'
 import type { BusinessRole, BusinessMembership, ApiResponse } from '@/types'
@@ -27,6 +29,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [businessName, setBusinessName] = useState<string | null>(null)
   const [role, setRole] = useState<BusinessRole | null>(null)
   const [businesses, setBusinesses] = useState<BusinessBrief[]>([])
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null)
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
+  const [subscriptionWarning, setSubscriptionWarning] = useState<string | null>(null)
+  const businessIdRef = useRef<string | null>(null)
 
   const [deviceLimitModal, setDeviceLimitModal] = useState<{ currentDevice: DeviceLimitInfo | null } | null>(null)
   const [isReplacingDevice, setIsReplacingDevice] = useState(false)
@@ -50,6 +56,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   usePaymentWebSocket(businessId !== null, handleWsMessage)
 
+  useEffect(() => { businessIdRef.current = businessId }, [businessId])
+
   useEffect(() => {
     api
       .get<ApiResponse<BusinessMembership[]>>('/api/v1/businesses')
@@ -67,6 +75,45 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {})
   }, [router])
+
+  useEffect(() => {
+    if (!businessId) return
+    setSubscriptionStatus(null)
+    api
+      .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null }>>(
+        `/api/v1/businesses/${businessId}/subscription`,
+      )
+      .then((res) => {
+        setSubscriptionStatus(res.data.status)
+        setTrialEndsAt(res.data.trialEndsAt)
+      })
+      .catch(() => {})
+  }, [businessId])
+
+  useEffect(() => {
+    function onInactive() {
+      const id = businessIdRef.current
+      if (!id) return
+      api
+        .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null }>>(
+          `/api/v1/businesses/${id}/subscription`,
+        )
+        .then((res) => {
+          setSubscriptionStatus(res.data.status)
+          setTrialEndsAt(res.data.trialEndsAt)
+        })
+        .catch(() => setSubscriptionStatus('SUSPENDED'))
+    }
+    function onWarning(e: Event) {
+      if (e instanceof CustomEvent) setSubscriptionWarning(e.detail as string)
+    }
+    window.addEventListener('subscription:inactive', onInactive)
+    window.addEventListener('subscription:warning', onWarning)
+    return () => {
+      window.removeEventListener('subscription:inactive', onInactive)
+      window.removeEventListener('subscription:warning', onWarning)
+    }
+  }, [])
 
   function switchBusiness(id: string) {
     const b = businesses.find((b) => b.id === id)
@@ -94,10 +141,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <BusinessContext.Provider value={{ businessId, businessName, role, businesses, switchBusiness }}>
+    <BusinessContext.Provider
+      value={{ businessId, businessName, role, businesses, switchBusiness, subscriptionStatus, trialEndsAt, subscriptionWarning }}
+    >
       <div className="flex h-full">
         <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="relative flex flex-1 flex-col overflow-hidden">
+          <SubscriptionBanner
+            status={subscriptionStatus}
+            trialEndsAt={trialEndsAt}
+            subscriptionWarning={subscriptionWarning}
+            role={role}
+            businessId={businessId}
+          />
+          {children}
+          <SubscriptionGate status={subscriptionStatus} role={role} />
+        </div>
       </div>
       {deviceLimitModal && (() => {
         const currentDevice = deviceLimitModal.currentDevice

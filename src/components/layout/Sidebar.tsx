@@ -25,7 +25,7 @@ const ROLE_LABELS: Record<string, string> = {
   OBSERVER: 'Observador',
 }
 
-const NAV_ITEMS: NavItem[] = [
+const BUSINESS_NAV: NavItem[] = [
   {
     href: '/dashboard',
     label: 'Dashboard',
@@ -70,6 +70,9 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+]
+
+const ACCOUNT_NAV: NavItem[] = [
   {
     href: '/dashboard/settings',
     label: 'Configuración',
@@ -162,14 +165,35 @@ function BusinessSwitcher() {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const active =
+    pathname === item.href ||
+    (item.href !== '/dashboard' && pathname.startsWith(item.href))
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+        ${active
+          ? 'bg-primary-light text-primary'
+          : 'text-muted hover:bg-gray-100 hover:text-foreground'
+        }`}
+    >
+      {item.icon}
+      {item.label}
+    </Link>
+  )
+}
+
 export function Sidebar() {
   const { role } = useActiveBusiness()
   const pathname = usePathname()
   const router = useRouter()
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => item.exists && (!role || (item.roles as readonly string[]).includes(role)),
-  )
+  function visible(items: NavItem[]) {
+    return items.filter(
+      (item) => item.exists && (!role || (item.roles as readonly string[]).includes(role)),
+    )
+  }
 
   function handleLogout() {
     clearSession()
@@ -189,39 +213,36 @@ export function Sidebar() {
 
       <BusinessSwitcher />
 
-      <nav className="flex flex-1 flex-col gap-1 p-3">
-        {visibleItems.map((item) => {
-          const active =
-            pathname === item.href ||
-            (item.href !== '/dashboard' && pathname.startsWith(item.href))
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
-                ${active
-                  ? 'bg-primary-light text-primary'
-                  : 'text-muted hover:bg-gray-100 hover:text-foreground'
-                }`}
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
+      <nav className="flex flex-1 flex-col p-3">
+        <div className="flex flex-col gap-1">
+          <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted/60">
+            Negocio
+          </p>
+          {visible(BUSINESS_NAV).map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} />
+          ))}
+        </div>
 
-      <div className="border-t border-border p-3">
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Cerrar sesión
-        </button>
-      </div>
+        <div className="flex-1" />
+
+        <div className="flex flex-col gap-1 border-t border-border pt-3">
+          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted/60">
+            Cuenta
+          </p>
+          {visible(ACCOUNT_NAV).map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} />
+          ))}
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Cerrar sesión
+          </button>
+        </div>
+      </nav>
     </aside>
   )
 }

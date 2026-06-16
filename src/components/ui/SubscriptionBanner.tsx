@@ -1,0 +1,67 @@
+'use client'
+
+import Link from 'next/link'
+import type { SubscriptionStatus } from '@/lib/business-context'
+import type { BusinessRole } from '@/types'
+
+interface Props {
+  status: SubscriptionStatus | null
+  trialEndsAt: string | null
+  subscriptionWarning: string | null
+  role: BusinessRole | null
+  businessId: string | null
+}
+
+function daysUntil(dateStr: string): number {
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+}
+
+export function SubscriptionBanner({ status, trialEndsAt, subscriptionWarning, role, businessId }: Props) {
+  if (!businessId) return null
+
+  const isOwner = role === 'OWNER'
+
+  if (status === 'TRIALING' && trialEndsAt) {
+    const days = daysUntil(trialEndsAt)
+    if (days > 7 || days <= 0) return null
+    return (
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-yellow-200 bg-yellow-50 px-6 py-3">
+        <p className="text-sm text-yellow-800">
+          <span className="font-semibold">
+            Tu prueba gratuita vence en {days} día{days !== 1 ? 's' : ''}.
+          </span>
+          {' '}Activá un plan para no perder el acceso.
+        </p>
+        {isOwner && (
+          <Link
+            href="/dashboard/settings#suscripcion"
+            className="shrink-0 rounded-lg bg-yellow-600 px-4 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Activar plan →
+          </Link>
+        )}
+      </div>
+    )
+  }
+
+  if (status === 'PAST_DUE' || subscriptionWarning === 'payment_overdue') {
+    return (
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-red-200 bg-red-50 px-6 py-3">
+        <p className="text-sm text-red-800">
+          <span className="font-semibold">Pago rechazado.</span>
+          {' '}Actualizá tu método de pago para evitar la suspensión de tu cuenta.
+        </p>
+        {isOwner && (
+          <Link
+            href="/dashboard/settings#suscripcion"
+            className="shrink-0 rounded-lg bg-red-600 px-4 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Gestionar suscripción →
+          </Link>
+        )}
+      </div>
+    )
+  }
+
+  return null
+}

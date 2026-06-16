@@ -3,6 +3,8 @@
 import { createContext, useContext } from 'react'
 import type { BusinessRole } from '@/types'
 
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELLED'
+
 export interface BusinessBrief {
   id: string
   name: string
@@ -15,6 +17,9 @@ interface BusinessContextValue {
   role: BusinessRole | null
   businesses: BusinessBrief[]
   switchBusiness: (id: string) => void
+  subscriptionStatus: SubscriptionStatus | null
+  trialEndsAt: string | null
+  subscriptionWarning: string | null
 }
 
 export const BusinessContext = createContext<BusinessContextValue>({
@@ -23,6 +28,9 @@ export const BusinessContext = createContext<BusinessContextValue>({
   role: null,
   businesses: [],
   switchBusiness: () => {},
+  subscriptionStatus: null,
+  trialEndsAt: null,
+  subscriptionWarning: null,
 })
 
 export function useActiveBusiness() {
