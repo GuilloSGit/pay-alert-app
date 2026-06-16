@@ -144,8 +144,10 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 |---|---|
 | `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main p-6. Usar en todas las páginas del dashboard. |
 | `Header` | `{ title }` — h-16 **shrink-0** (sin esto se comprime en flex column) |
-| `Sidebar` | Nav items filtrados por rol + BusinessSwitcher al tope. Usa `useActiveBusiness()` directamente (sin prop de rol). Para agregar página: `exists: false → true` en `NAV_ITEMS` |
-| `DashboardShell` | BusinessContext provider (con `businesses[]` + `switchBusiness()`) + DeviceLimitModal (ConfirmDialog) + PaymentToastContainer |
+| `Sidebar` | Dos secciones: `BUSINESS_NAV` (Dashboard, Pagos, Mi Comercio, Miembros) con labels "NEGOCIO"/"CUENTA" y spacer `flex-1`. Para agregar página: agregar a `BUSINESS_NAV` o `ACCOUNT_NAV` con `exists: true`. Sub-componente `NavLink` reutilizable. |
+| `DashboardShell` | BusinessContext provider + fetch `/subscription` por businessId + listeners `subscription:inactive`/`subscription:warning` + DeviceLimitModal + PaymentToastContainer + SubscriptionBanner + SubscriptionGate |
+| `SubscriptionBanner` | Banner no bloqueante: amarillo (TRIALING ≤7 días) o rojo (PAST_DUE). Vive antes de `{children}` en el shell. |
+| `SubscriptionGate` | Overlay `absolute inset-0 z-40 backdrop-blur-sm` para SUSPENDED/CANCELLED. Sidebar queda interactivo. CTA varía por rol. |
 
 ---
 
@@ -164,13 +166,20 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
 | `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio (título dinámico = businessName), MP, suscripción + banner onboarding |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
-| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + cambio de contraseña + dispositivos FCM |
+| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Suscripción + Perfil + Seguridad + Dispositivos FCM |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
+| `/suscripcion/resultado` | `src/app/suscripcion/resultado/page.tsx` | ✅ Página pública post-checkout MP |
 
 ### BusinessContext — patrón central de datos
 `DashboardShell` (`src/components/layout/DashboardShell.tsx`) hace `GET /businesses` al montar
-y expone `{ businessId, businessName, role, businesses[], switchBusiness() }` via React Context.
-Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ellas mismas.
+y expone via React Context:
+```ts
+{ businessId, businessName, role, businesses[], switchBusiness(),
+  subscriptionStatus, trialEndsAt, subscriptionWarning }
+```
+`subscriptionStatus` viene de `GET /businesses/:id/subscription` (se refetch en cada cambio de businessId).
+`subscriptionWarning` se setea cuando `api.ts` recibe el header `X-Subscription-Warning`.
+Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/subscription` ellas mismas (excepción: Settings tiene su propio fetch de suscripción para mostrar detalles completos del plan).
 
 **Multi-business:** `switchBusiness(id)` cambia el negocio activo, llama `queryClient.clear()` para vaciar todo el caché y redirige a `/dashboard`. La interfaz `BusinessBrief = { id, name, role }` vive en `src/lib/business-context.tsx`.
 
