@@ -55,10 +55,11 @@ export function usePaymentWebSocket(
       const token = getAccessToken()
       if (!token) return
 
-      ws = new WebSocket(`${WS_BASE}/api/v1/ws?token=${encodeURIComponent(token)}`)
+      ws = new WebSocket(`${WS_BASE}/api/v1/ws`)
 
       ws.onopen = () => {
         delay = 1_000
+        ws?.send(JSON.stringify({ type: 'auth', token }))
       }
 
       ws.onmessage = (event) => {
