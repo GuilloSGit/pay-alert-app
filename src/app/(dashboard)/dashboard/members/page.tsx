@@ -318,12 +318,14 @@ export default function MembersPage() {
             )}
           </div>
 
-          {/* Tabla de miembros activos */}
+          {/* Tabla / cards de miembros activos */}
           <Card className="overflow-hidden p-0">
             <div className="border-b border-border px-6 py-4">
               <h2 className="text-sm font-semibold text-foreground">Miembros activos</h2>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Vista tabla — desktop */}
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gray-50">
@@ -383,15 +385,58 @@ export default function MembersPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Vista card — mobile */}
+            <div className="divide-y divide-border sm:hidden">
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 px-4 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(m.user.id)}`}>
+                      {getInitials(m.user.name)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{m.user.name}</p>
+                      <p className="truncate text-xs text-muted">{m.user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                    {isOwner && m.role !== 'OWNER' ? (
+                      <select
+                        value={m.role}
+                        disabled={changingRoleId === m.id}
+                        onChange={(e) => handleRoleChange(m.id, e.target.value as BusinessRole)}
+                        className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                      >
+                        {(['ADMIN', 'MEMBER', 'OBSERVER'] as const).map((r) => (
+                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Badge className={ROLE_CLASSES[m.role]}>{ROLE_LABELS[m.role]}</Badge>
+                    )}
+                    {isManager && m.role !== 'OWNER' && (
+                      <button
+                        onClick={() => setRevokeTarget(m)}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                      >
+                        Revocar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </Card>
 
-          {/* Tabla de invitaciones pendientes */}
+          {/* Invitaciones pendientes */}
           {invitations.length > 0 && (
             <Card className="overflow-hidden p-0">
               <div className="border-b border-border px-6 py-4">
                 <h2 className="text-sm font-semibold text-foreground">Invitaciones pendientes</h2>
               </div>
-              <div className="overflow-x-auto">
+
+              {/* Vista tabla — desktop */}
+              <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-gray-50">
@@ -426,6 +471,30 @@ export default function MembersPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Vista card — mobile */}
+              <div className="divide-y divide-border sm:hidden">
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{inv.email}</p>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <Badge className={ROLE_CLASSES[inv.role]}>{ROLE_LABELS[inv.role]}</Badge>
+                        <span className="text-xs text-muted">{timeRemaining(inv.expiresAt)}</span>
+                      </div>
+                    </div>
+                    {isManager && (
+                      <button
+                        onClick={() => handleCancelInvitation(inv.id)}
+                        disabled={cancellingInvId === inv.id}
+                        className="flex-shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground disabled:opacity-50"
+                      >
+                        {cancellingInvId === inv.id ? 'Cancelando...' : 'Cancelar'}
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </Card>
           )}

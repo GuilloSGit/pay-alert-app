@@ -219,6 +219,7 @@ export default function PaymentsPage() {
   const { businessId } = useActiveBusiness()
 
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   const [status, setStatus] = useState<StatusFilter>('')
   const [from, setFrom] = useState('')
@@ -319,8 +320,32 @@ export default function PaymentsPage() {
       </div>
 
       {/* Búsqueda + Filtros */}
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1">
+
+      {/* Toggle — solo mobile */}
+      <div className="mb-3 flex items-center gap-2 sm:hidden">
+        <button
+          onClick={() => setShowFilters((s) => !s)}
+          className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+          </svg>
+          Filtros
+          {hasFilters && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+              {[status !== '', from !== '', to !== '', q !== ''].filter(Boolean).length}
+            </span>
+          )}
+        </button>
+        {hasFilters && (
+          <button onClick={clearFilters} className="text-sm text-muted underline underline-offset-2">
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      <div className={`mb-4 flex-wrap items-end gap-3 ${showFilters ? 'flex' : 'hidden sm:flex'}`}>
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted">Buscar</label>
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -331,7 +356,7 @@ export default function PaymentsPage() {
               placeholder="Nombre, email, ID de MP..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-64 rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary sm:w-64"
             />
           </div>
         </div>
@@ -372,7 +397,7 @@ export default function PaymentsPage() {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="rounded-lg border border-border px-3 py-2 text-sm text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
+            className="hidden rounded-lg border border-border px-3 py-2 text-sm text-muted transition-colors hover:bg-gray-100 hover:text-foreground sm:block"
           >
             Limpiar filtros
           </button>
@@ -405,7 +430,8 @@ export default function PaymentsPage() {
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Vista tabla — desktop */}
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gray-50">
@@ -449,6 +475,32 @@ export default function PaymentsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Vista card — mobile */}
+            <div className="divide-y divide-border sm:hidden">
+              {payments.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPayment(p)}
+                  className={`w-full px-4 py-4 text-left transition-colors hover:bg-blue-50 active:bg-blue-100 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-base font-bold text-foreground tabular-nums">
+                      {formatAmount(p.amount, p.currency)}
+                    </span>
+                    <Badge className={STATUS_CLASSES[p.status]}>{STATUS_LABELS[p.status]}</Badge>
+                  </div>
+                  <p className="mt-1.5 truncate text-sm text-muted">
+                    {p.payerName ?? p.payerEmail ?? 'Pagador anónimo'}
+                  </p>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                    <span className="whitespace-nowrap">{formatDate(p.paidAt ?? p.receivedAt)}</span>
+                    <span>·</span>
+                    <span>{formatPaymentMethod(p.paymentMethod)}</span>
+                  </div>
+                </button>
+              ))}
             </div>
 
             <div className="flex items-center justify-between border-t border-border px-6 py-4">

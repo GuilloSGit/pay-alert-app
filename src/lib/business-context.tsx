@@ -20,6 +20,7 @@ interface BusinessContextValue {
   subscriptionStatus: SubscriptionStatus | null
   trialEndsAt: string | null
   subscriptionWarning: string | null
+  openSidebar: () => void
 }
 
 export const BusinessContext = createContext<BusinessContextValue>({
@@ -31,6 +32,7 @@ export const BusinessContext = createContext<BusinessContextValue>({
   subscriptionStatus: null,
   trialEndsAt: null,
   subscriptionWarning: null,
+  openSidebar: () => {},
 })
 
 export function useActiveBusiness() {

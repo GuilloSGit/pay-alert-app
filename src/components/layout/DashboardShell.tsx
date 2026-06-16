@@ -34,6 +34,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [subscriptionWarning, setSubscriptionWarning] = useState<string | null>(null)
   const businessIdRef = useRef<string | null>(null)
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const [deviceLimitModal, setDeviceLimitModal] = useState<{ currentDevice: DeviceLimitInfo | null } | null>(null)
   const [isReplacingDevice, setIsReplacingDevice] = useState(false)
 
@@ -142,10 +144,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <BusinessContext.Provider
-      value={{ businessId, businessName, role, businesses, switchBusiness, subscriptionStatus, trialEndsAt, subscriptionWarning }}
+      value={{ businessId, businessName, role, businesses, switchBusiness, subscriptionStatus, trialEndsAt, subscriptionWarning, openSidebar: () => setSidebarOpen(true) }}
     >
       <div className="flex h-full">
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="relative flex flex-1 flex-col overflow-hidden">
           <SubscriptionBanner
             status={subscriptionStatus}
