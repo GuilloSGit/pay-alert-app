@@ -169,7 +169,6 @@ export default function DashboardPage() {
                 <tr className="border-b border-border bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Estado</th>
                   <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">Monto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Pagador</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">Fecha</th>
                 </tr>
               </thead>
@@ -181,9 +180,6 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-foreground tabular-nums">
                       {formatAmount(p.amount, p.currency)}
-                    </td>
-                    <td className="px-6 py-3 text-muted">
-                      {p.payerName ?? p.payerEmail ?? '—'}
                     </td>
                     <td className="px-6 py-3 text-muted whitespace-nowrap">
                       {formatDate(p.paidAt ?? p.receivedAt)}
