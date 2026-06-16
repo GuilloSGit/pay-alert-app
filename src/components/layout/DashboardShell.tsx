@@ -80,16 +80,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!businessId) return
-    setSubscriptionStatus(null)
+    let cancelled = false
     api
       .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null }>>(
         `/api/v1/businesses/${businessId}/subscription`,
       )
       .then((res) => {
+        if (cancelled) return
         setSubscriptionStatus(res.data.status)
         setTrialEndsAt(res.data.trialEndsAt)
       })
       .catch(() => {})
+    return () => { cancelled = true }
   }, [businessId])
 
   useEffect(() => {
