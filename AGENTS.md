@@ -210,6 +210,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 | `/dashboard/settings` (devices) | `['devices']` | `invalidateQueries` tras DELETE exitoso |
 
 - `DashboardShell.handleWsMessage` llama `refetchQueries` (no `invalidateQueries`) para forzar refetch inmediato aunque los datos no estén stale.
+- **Patrón `cancelled` en useEffect async:** en `DashboardShell` el fetch de `/subscription` usa `let cancelled = false` + `return () => { cancelled = true }` + guard `if (cancelled) return` en `.then()`. Evita aplicar resultados stale al cambiar de negocio y elimina el `setSubscriptionStatus(null)` sincrónico que disparaba `react-hooks/set-state-in-effect`.
 - Las mutaciones de members usan `queryClient.invalidateQueries({ queryKey: ['members', businessId] })` y confían en el refetch para actualizar la UI.
 
 ### WebSocket tiempo real
