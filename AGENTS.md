@@ -142,10 +142,10 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 ### src/components/layout/
 | Componente | Descripción |
 |---|---|
-| `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main p-6. Usar en todas las páginas del dashboard. |
-| `Header` | `{ title }` — h-16 **shrink-0** (sin esto se comprime en flex column) |
-| `Sidebar` | Dos secciones: `BUSINESS_NAV` (Dashboard, Pagos, Mi Comercio, Miembros) con labels "NEGOCIO"/"CUENTA" y spacer `flex-1`. Para agregar página: agregar a `BUSINESS_NAV` o `ACCOUNT_NAV` con `exists: true`. Sub-componente `NavLink` reutilizable. |
-| `DashboardShell` | BusinessContext provider + fetch `/subscription` por businessId + listeners `subscription:inactive`/`subscription:warning` + DeviceLimitModal + PaymentToastContainer + SubscriptionBanner + SubscriptionGate |
+| `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main `p-4 sm:p-6`. Usar en todas las páginas del dashboard. |
+| `Header` | `{ title }` — h-16 **shrink-0**; consume `openSidebar()` de `useActiveBusiness()` para el hamburger `lg:hidden`; nombre usuario `hidden sm:block`; padding `px-4 lg:px-6`. |
+| `Sidebar` | Props: `{ isOpen: boolean; onClose: () => void }`. Drawer `fixed inset-y-0 left-0 z-50` en mobile con overlay `z-40`; `lg:static lg:translate-x-0` en desktop. Dos secciones: `BUSINESS_NAV` / `ACCOUNT_NAV` con labels "NEGOCIO"/"CUENTA". Para agregar página: agregar a `BUSINESS_NAV` o `ACCOUNT_NAV` con `exists: true`. NavLinks llaman `onClose` al clickear (cierra drawer en mobile). |
+| `DashboardShell` | BusinessContext provider + `sidebarOpen` state + fetch `/subscription` por businessId + listeners `subscription:inactive`/`subscription:warning` + DeviceLimitModal + PaymentToastContainer + SubscriptionBanner + SubscriptionGate |
 | `SubscriptionBanner` | Banner no bloqueante: amarillo (TRIALING ≤7 días) o rojo (PAST_DUE). Vive antes de `{children}` en el shell. |
 | `SubscriptionGate` | Overlay `absolute inset-0 z-40 backdrop-blur-sm` para SUSPENDED/CANCELLED. Sidebar queda interactivo. CTA varía por rol. |
 
@@ -175,7 +175,8 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 y expone via React Context:
 ```ts
 { businessId, businessName, role, businesses[], switchBusiness(),
-  subscriptionStatus, trialEndsAt, subscriptionWarning }
+  subscriptionStatus, trialEndsAt, subscriptionWarning,
+  openSidebar() }   // ← Header llama esto para abrir el drawer mobile
 ```
 `subscriptionStatus` viene de `GET /businesses/:id/subscription` (se refetch en cada cambio de businessId).
 `subscriptionWarning` se setea cuando `api.ts` recibe el header `X-Subscription-Warning`.
