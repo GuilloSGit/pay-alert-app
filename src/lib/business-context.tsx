@@ -17,6 +17,7 @@ interface BusinessContextValue {
   role: BusinessRole | null
   businesses: BusinessBrief[]
   switchBusiness: (id: string) => void
+  refreshBusinesses: (switchToId: string) => Promise<void>
   subscriptionStatus: SubscriptionStatus | null
   trialEndsAt: string | null
   subscriptionWarning: string | null
@@ -29,6 +30,7 @@ export const BusinessContext = createContext<BusinessContextValue>({
   role: null,
   businesses: [],
   switchBusiness: () => {},
+  refreshBusinesses: async () => {},
   subscriptionStatus: null,
   trialEndsAt: null,
   subscriptionWarning: null,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SubscriptionBanner } from '@/components/ui/SubscriptionBanner'
@@ -15,7 +15,7 @@ import { usePaymentWebSocket } from '@/lib/use-payment-websocket'
 import { PaymentToastContainer } from '@/components/ui/PaymentToast'
 import type { BusinessRole, BusinessMembership, ApiResponse } from '@/types'
 import type { DeviceLimitInfo } from '@/lib/device'
-import type { WsPaymentMessage } from '@/lib/use-payment-websocket'
+import type { WsMessage } from '@/lib/use-payment-websocket'
 import type { PaymentToast } from '@/components/ui/PaymentToast'
 
 
@@ -23,7 +23,6 @@ let toastCounter = 0
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const pathname = usePathname()
 
   const [businessId, setBusinessId] = useState<string | null>(null)
   const [businessName, setBusinessName] = useState<string | null>(null)
@@ -40,10 +39,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [isReplacingDevice, setIsReplacingDevice] = useState(false)
 
   const [toasts, setToasts] = useState<PaymentToast[]>([])
+  const [mpTokenInvalid, setMpTokenInvalid] = useState(false)
   const queryClient = useQueryClient()
-  const pathnameAtMount = useRef(pathname)
-
-  const handleWsMessage = useCallback((msg: WsPaymentMessage) => {
+  const handleWsMessage = useCallback((msg: WsMessage) => {
+    if (msg.type === 'mp.token_invalid') {
+      if (msg.data.businessId === businessIdRef.current) setMpTokenInvalid(true)
+      return
+    }
     setToasts((prev) => {
       const next = [...prev, { id: ++toastCounter, msg }]
       return next.length > 3 ? next.slice(next.length - 3) : next
@@ -60,6 +62,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { businessIdRef.current = businessId }, [businessId])
 
+  const refreshBusinesses = useCallback(async (switchToId: string) => {
+    try {
+      const res = await api.get<ApiResponse<BusinessMembership[]>>('/api/v1/businesses')
+      const list = res.data
+      const prevId = businessIdRef.current
+      const target = list.find((b) => b.id === switchToId) ?? list[0]
+      setBusinesses(list.map((b) => ({ id: b.id, name: b.name, role: b.role })))
+      if (target) {
+        setBusinessId(target.id)
+        setBusinessName(target.name)
+        setRole(target.role)
+        if (switchToId !== prevId) queryClient.clear()
+      }
+    } catch {}
+  }, [queryClient])
+
   useEffect(() => {
     api
       .get<ApiResponse<BusinessMembership[]>>('/api/v1/businesses')
@@ -71,7 +89,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           setBusinessId(first.id)
           setBusinessName(first.name)
           setRole(first.role)
-        } else if (pathnameAtMount.current !== '/dashboard/businesses') {
+        } else {
           router.replace('/dashboard/businesses')
         }
       })
@@ -125,6 +143,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setBusinessId(b.id)
     setBusinessName(b.name)
     setRole(b.role)
+    setMpTokenInvalid(false)
     queryClient.clear()
     router.push('/dashboard')
   }
@@ -146,7 +165,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <BusinessContext.Provider
-      value={{ businessId, businessName, role, businesses, switchBusiness, subscriptionStatus, trialEndsAt, subscriptionWarning, openSidebar: () => setSidebarOpen(true) }}
+      value={{ businessId, businessName, role, businesses, switchBusiness, refreshBusinesses, subscriptionStatus, trialEndsAt, subscriptionWarning, openSidebar: () => setSidebarOpen(true) }}
     >
       <div className="flex h-full">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -157,6 +176,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             subscriptionWarning={subscriptionWarning}
             role={role}
             businessId={businessId}
+            mpTokenInvalid={mpTokenInvalid}
           />
           {children}
           <SubscriptionGate status={subscriptionStatus} role={role} />
