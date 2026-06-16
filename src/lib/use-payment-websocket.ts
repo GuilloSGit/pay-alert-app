@@ -33,9 +33,16 @@ export interface WsPaymentMessage {
   }
 }
 
+export interface WsMpTokenInvalidMessage {
+  type: 'mp.token_invalid'
+  data: { businessId: string }
+}
+
+export type WsMessage = WsPaymentMessage | WsMpTokenInvalidMessage
+
 export function usePaymentWebSocket(
   enabled: boolean,
-  onMessage: (msg: WsPaymentMessage) => void,
+  onMessage: (msg: WsMessage) => void,
 ) {
   const onMessageRef = useRef(onMessage)
   useLayoutEffect(() => {
@@ -64,8 +71,8 @@ export function usePaymentWebSocket(
 
       ws.onmessage = (event) => {
         try {
-          const msg = JSON.parse(event.data as string) as WsPaymentMessage
-          if (!msg.type?.startsWith('payment.')) return
+          const msg = JSON.parse(event.data as string) as WsMessage
+          if (!msg.type?.startsWith('payment.') && msg.type !== 'mp.token_invalid') return
           onMessageRef.current(msg)
         } catch {}
       }

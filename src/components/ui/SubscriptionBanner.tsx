@@ -10,16 +10,36 @@ interface Props {
   subscriptionWarning: string | null
   role: BusinessRole | null
   businessId: string | null
+  mpTokenInvalid?: boolean
 }
 
 function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 }
 
-export function SubscriptionBanner({ status, trialEndsAt, subscriptionWarning, role, businessId }: Props) {
+export function SubscriptionBanner({ status, trialEndsAt, subscriptionWarning, role, businessId, mpTokenInvalid }: Props) {
   if (!businessId) return null
 
   const isOwner = role === 'OWNER'
+
+  if (mpTokenInvalid) {
+    return (
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-orange-200 bg-orange-50 px-6 py-3">
+        <p className="text-sm text-orange-800">
+          <span className="font-semibold">Conexión con Mercado Pago interrumpida.</span>
+          {' '}Tu token venció o fue revocado — no se están recibiendo notificaciones de pagos.
+        </p>
+        {isOwner && (
+          <Link
+            href="/dashboard/settings"
+            className="shrink-0 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Reconectar →
+          </Link>
+        )}
+      </div>
+    )
+  }
 
   if (status === 'TRIALING' && trialEndsAt) {
     const days = daysUntil(trialEndsAt)
