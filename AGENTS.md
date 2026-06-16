@@ -145,8 +145,8 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main `p-4 sm:p-6`. Usar en todas las páginas del dashboard. |
 | `Header` | `{ title }` — h-16 **shrink-0**; consume `openSidebar()` de `useActiveBusiness()` para el hamburger `lg:hidden`; nombre usuario `hidden sm:block`; padding `px-4 lg:px-6`. |
 | `Sidebar` | Props: `{ isOpen: boolean; onClose: () => void }`. Drawer `fixed inset-y-0 left-0 z-50` en mobile con overlay `z-40`; `lg:static lg:translate-x-0` en desktop. Dos secciones: `BUSINESS_NAV` / `ACCOUNT_NAV` con labels "NEGOCIO"/"CUENTA". Para agregar página: agregar a `BUSINESS_NAV` o `ACCOUNT_NAV` con `exists: true`. NavLinks llaman `onClose` al clickear (cierra drawer en mobile). |
-| `DashboardShell` | BusinessContext provider + `sidebarOpen` state + fetch `/subscription` por businessId + listeners `subscription:inactive`/`subscription:warning` + DeviceLimitModal + PaymentToastContainer + SubscriptionBanner + SubscriptionGate |
-| `SubscriptionBanner` | Banner no bloqueante: amarillo (TRIALING ≤7 días) o rojo (PAST_DUE). Vive antes de `{children}` en el shell. |
+| `DashboardShell` | BusinessContext provider + `sidebarOpen` state + fetch `/subscription` por businessId + listeners `subscription:inactive`/`subscription:warning` + `mpTokenInvalid` state (bool) + DeviceLimitModal + PaymentToastContainer + SubscriptionBanner + SubscriptionGate |
+| `SubscriptionBanner` | Banner no bloqueante: naranja 1º prioridad si `mpTokenInvalid` (link "Reconectar →" a `/dashboard/settings#mp-connect`, solo OWNER); amarillo (TRIALING ≤7 días); rojo (PAST_DUE). Vive antes de `{children}` en el shell. |
 | `SubscriptionGate` | Overlay `absolute inset-0 z-40 backdrop-blur-sm` para SUSPENDED/CANCELLED. Sidebar queda interactivo. CTA varía por rol. |
 
 ---
@@ -166,7 +166,7 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
 | `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio (título dinámico = businessName), MP, suscripción + banner onboarding |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
-| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Suscripción + Perfil + Seguridad + Dispositivos FCM |
+| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Mis comercios + MP Connect + Suscripción + Perfil + Seguridad + Dispositivos FCM |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
 | `/suscripcion/resultado` | `src/app/suscripcion/resultado/page.tsx` | ✅ Página pública post-checkout MP |
 
@@ -175,11 +175,13 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 y expone via React Context:
 ```ts
 { businessId, businessName, role, businesses[], switchBusiness(),
+  refreshBusinesses(switchToId: string),   // re-fetch /businesses y cambia al comercio indicado
   subscriptionStatus, trialEndsAt, subscriptionWarning,
   openSidebar() }   // ← Header llama esto para abrir el drawer mobile
 ```
 `subscriptionStatus` viene de `GET /businesses/:id/subscription` (se refetch en cada cambio de businessId).
 `subscriptionWarning` se setea cuando `api.ts` recibe el header `X-Subscription-Warning`.
+`refreshBusinesses(switchToId)` re-fetcha `/businesses`, actualiza la lista y cambia al comercio con ese id. Usar después de crear un comercio nuevo. **No llamar dentro de un `useEffect`** — dispara `react-hooks/set-state-in-effect`. Llamar en callbacks (`.then()`, handlers).
 Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/subscription` ellas mismas (excepción: Settings tiene su propio fetch de suscripción para mostrar detalles completos del plan).
 
 **Multi-business:** `switchBusiness(id)` cambia el negocio activo, llama `queryClient.clear()` para vaciar todo el caché y redirige a `/dashboard`. La interfaz `BusinessBrief = { id, name, role }` vive en `src/lib/business-context.tsx`.
@@ -194,7 +196,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 | `/dashboard/payments` | `GET /businesses/:id/payments` · `GET /businesses/:id/payments/:id` · `GET /businesses/:id/payments/:id/afip` |
 | `/dashboard/businesses` | `GET /businesses/:id` · `GET /businesses/:id/mp-connect` · `GET /businesses/:id/summary` |
 | `/dashboard/members` | `GET /businesses/:id/members` · `POST /businesses/:id/invitations` · `DELETE /businesses/:id/invitations/:invId` · `PUT /businesses/:id/members/:memberId/role` · `DELETE /businesses/:id/members/:memberId` |
-| `/dashboard/settings` | `GET /users/me` · `PUT /users/me` · `POST /auth/change-password` · `GET /users/me/devices` · `DELETE /users/me/devices/:id` |
+| `/dashboard/settings` | `GET /users/me` · `PUT /users/me` · `POST /auth/change-password` · `GET /users/me/devices` · `DELETE /users/me/devices/:id` · `GET /businesses/:id/mp-connect` · `POST /businesses/:id/mp-connect` · `DELETE /businesses/:id/mp-connect` · `POST /businesses` |
 
 ### TanStack Query v5 — patrón de datos
 
@@ -208,6 +210,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 | `DetailPanel` (AFIP) | `['afip', businessId, paymentId]` | Al abrir el panel (por `payment.id`) |
 | `/dashboard/settings` (perfil) | `['me']` | `invalidateQueries` tras PUT exitoso |
 | `/dashboard/settings` (devices) | `['devices']` | `invalidateQueries` tras DELETE exitoso |
+| `/dashboard/settings` (MP connect) | `['mp-connect', businessId]` | `invalidateQueries` tras connect/disconnect |
 
 - `DashboardShell.handleWsMessage` llama `refetchQueries` (no `invalidateQueries`) para forzar refetch inmediato aunque los datos no estén stale.
 - **Patrón `cancelled` en useEffect async:** en `DashboardShell` el fetch de `/subscription` usa `let cancelled = false` + `return () => { cancelled = true }` + guard `if (cancelled) return` en `.then()`. Evita aplicar resultados stale al cambiar de negocio y elimina el `setSubscriptionStatus(null)` sincrónico que disparaba `react-hooks/set-state-in-effect`.
@@ -221,6 +224,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 - **Sonido:** AudioContext singleton en `PaymentToast.tsx`. Se crea una sola vez y se desbloquea en el primer gesto del usuario (`click`/`keydown`/`touchstart`). Registrado en `PaymentToastContainer` via `useEffect`. No crear `new AudioContext()` en cada llamada — el browser lo bloquea por autoplay policy.
 - WS URL: `NEXT_PUBLIC_WS_URL` (ver env vars) — **no** usar `NEXT_PUBLIC_API_URL` para WS en local
 - Endpoint de prueba local: `POST /dev/test-notify` (requiere Bearer JWT)
+- **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries.
 
 ### Jerarquía de roles
 
@@ -302,15 +306,15 @@ member@test.com / Test1234!  → MEMBER
 
 ## Roadmap FE — pendientes (estado 2026-06-16)
 
-### Prioridad 1 — Crear comercio desde la UI
-- Sección "Mis comercios" en `/dashboard/settings` — lista todos los negocios + botón "Agregar comercio"
-- `DashboardShell` necesita exponer `refreshBusinesses()` en el contexto (actualmente no existe)
-- Restricción de plan: `maxBusinesses` — si llegó al límite, mostrar CTA de upgrade
+### ✅ Completados esta sesión (sesión 7 — 2026-06-16)
+- **Crear comercio desde la UI** — sección "Mis comercios" en `/dashboard/settings`: lista negocios con rol + badge "Activo", modal "Agregar comercio" → POST /businesses → `refreshBusinesses(id)` → redirect `/dashboard`
+- **MP Connect UI** — sección en `/dashboard/settings#mp-connect` con 3 estados: conectado (ID MP + fecha + badge + botón "Desconectar"), desconectado (PasswordInput token + botón "Conectar"), token vencido (banner naranja + form reconexión). Códigos de error mapeados: `INVALID_MP_TOKEN` → mensaje específico, `MP_ACCOUNT_ALREADY_CONNECTED` → `err.message` del BE.
+- **WS `mp.token_invalid`** — `DashboardShell` maneja el mensaje → `setMpTokenInvalid(true)`. `SubscriptionBanner` muestra banner naranja con "Reconectar →" (solo OWNER). `switchBusiness` resetea a `false`.
 
-### Prioridad 2 — Monetización UI
-- Pantalla de plan actual y estado de suscripción
-- Banner warning si header `X-Subscription-Warning: PAST_DUE`
-- Pantalla 402 bloqueante con CTA de upgrade de plan
+### Prioridad 3 — Onboarding instrucciones MP Connect
+- SlideOver accesible desde "¿Cómo obtengo el token?" (link bajo el PasswordInput en MpConnectSection)
+- Guía ilustrada paso a paso: crear app en MP Developers → obtener Access Token de producción → pegar en Pay Alert
+- Incluir: **sí, es necesario crear una app MP** para tener un Access Token de producción (sandbox no sirve para preapprovals)
 
 ### Prioridad 3 — Features Business+
 - Exportación CSV de pagos
