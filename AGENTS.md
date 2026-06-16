@@ -204,7 +204,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ellas 
 
 ### WebSocket tiempo real
 
-`DashboardShell` conecta automáticamente al WebSocket (`/api/v1/ws?token=<jwt>`) cuando el `businessId` está disponible.
+`DashboardShell` conecta automáticamente al WebSocket (`/api/v1/ws`) cuando el `businessId` está disponible. **No hay `?token=` en la URL** — el JWT se envía como primer mensaje una vez abierto el socket (`ws.onopen → ws.send({ type: 'auth', token })`). Si el servidor responde con close code `4001`, el hook llama `tryRefresh().then(connect)`.
 - Hook: `src/lib/use-payment-websocket.ts` — reconexión con exponential backoff (1s→30s). Actualiza el ref del callback con `useLayoutEffect` sin deps para evitar closures stale.
 - Toast: `src/components/ui/PaymentToast.tsx` — stack bottom-right, max 3, auto-dismiss 5s
 - **Sonido:** AudioContext singleton en `PaymentToast.tsx`. Se crea una sola vez y se desbloquea en el primer gesto del usuario (`click`/`keydown`/`touchstart`). Registrado en `PaymentToastContainer` via `useEffect`. No crear `new AudioContext()` en cada llamada — el browser lo bloquea por autoplay policy.
@@ -286,3 +286,40 @@ member@test.com / Test1234!  → MEMBER
 | Backend API | 3001 |
 | Postgres | 5432 |
 | Redis | 6379 |
+
+---
+
+## Roadmap FE — pendientes (estado 2026-06-16)
+
+### Prioridad 1 — Crear comercio desde la UI
+- Sección "Mis comercios" en `/dashboard/settings` — lista todos los negocios + botón "Agregar comercio"
+- `DashboardShell` necesita exponer `refreshBusinesses()` en el contexto (actualmente no existe)
+- Restricción de plan: `maxBusinesses` — si llegó al límite, mostrar CTA de upgrade
+
+### Prioridad 2 — Monetización UI
+- Pantalla de plan actual y estado de suscripción
+- Banner warning si header `X-Subscription-Warning: PAST_DUE`
+- Pantalla 402 bloqueante con CTA de upgrade de plan
+
+### Prioridad 3 — Features Business+
+- Exportación CSV de pagos
+- Alertas por monto mínimo configurables
+- Resumen diario por email
+
+### Prioridad 4 — Panel Admin interno (`pay-alert-admin`)
+Repo separado, deploy en `admin.pay-alert.com.ar` (Vercel — DNS gestionado por Vercel NS, configurar CNAME desde el proyecto en Vercel).
+- **Clientes** — tabla de usuarios y comercios, estado de suscripción, acciones manuales
+- **Pagos globales** — historial de todos los comercios para soporte y auditoría
+- **Facturas** — listado con estado PAID/PENDING/OVERDUE
+- **Estado del sistema** — métricas de `GET /admin/metrics` + integración UptimeRobot (`https://stats.uptimerobot.com/8wBVJ8r93D`)
+- **Bug reports** — kanban OPEN/IN_PROGRESS/CLOSED, cambiar estado dispara email al usuario
+
+### Prioridad 4 — Página "Equipo / About"
+- Sección en landing o `/about` presentando a Guillermo Andrada (https://ga-software.dev) y la oferta de servicios
+- Decidir: sección de scroll en la landing actual o página separada `/about`
+
+### Prioridad 4 — Reporte de bugs (FE)
+- Botón "Reportar un problema" en el dashboard (menú de usuario o footer)
+- Modal con descripción, severidad, pasos para reproducir
+- Consume `POST /api/v1/bugs` (endpoint nuevo en BE)
+- No requiere auth para poder reportar también desde la landing
