@@ -304,17 +304,15 @@ member@test.com / Test1234!  → MEMBER
 
 ---
 
-## Roadmap FE — pendientes (estado 2026-06-16)
+## Roadmap FE — pendientes (estado 2026-06-17)
 
-### ✅ Completados esta sesión (sesión 7 — 2026-06-16)
+### ✅ Completados esta sesión (sesión 9 — 2026-06-17)
+- **P3 Onboarding MP Connect — SlideOver:** link "¿Cómo obtengo el token?" bajo el `PasswordInput` en `MpConnectSection` (solo OWNER, solo cuando no hay MP conectado). Abre `SlideOver` con banner naranja "Necesitás un Access Token de producción" + 3 pasos numerados: (1) crear app en mercadopago.com.ar/developers/panel/app, (2) copiar Access Token desde Credenciales → Producción (monospace `APP_USR-`), (3) pegar en Settings → Conectar. Botón "Entendido" cierra.
+
+### ✅ Completados (sesión 7 — 2026-06-16)
 - **Crear comercio desde la UI** — sección "Mis comercios" en `/dashboard/settings`: lista negocios con rol + badge "Activo", modal "Agregar comercio" → POST /businesses → `refreshBusinesses(id)` → redirect `/dashboard`
 - **MP Connect UI** — sección en `/dashboard/settings#mp-connect` con 3 estados: conectado (ID MP + fecha + badge + botón "Desconectar"), desconectado (PasswordInput token + botón "Conectar"), token vencido (banner naranja + form reconexión). Códigos de error mapeados: `INVALID_MP_TOKEN` → mensaje específico, `MP_ACCOUNT_ALREADY_CONNECTED` → `err.message` del BE.
 - **WS `mp.token_invalid`** — `DashboardShell` maneja el mensaje → `setMpTokenInvalid(true)`. `SubscriptionBanner` muestra banner naranja con "Reconectar →" (solo OWNER). `switchBusiness` resetea a `false`.
-
-### Prioridad 3 — Onboarding instrucciones MP Connect
-- SlideOver accesible desde "¿Cómo obtengo el token?" (link bajo el PasswordInput en MpConnectSection)
-- Guía ilustrada paso a paso: crear app en MP Developers → obtener Access Token de producción → pegar en Pay Alert
-- Incluir: **sí, es necesario crear una app MP** para tener un Access Token de producción (sandbox no sirve para preapprovals)
 
 ### Prioridad 3 — Features Business+
 - Exportación CSV de pagos
