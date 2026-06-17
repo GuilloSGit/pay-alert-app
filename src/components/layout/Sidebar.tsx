@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearSession } from '@/lib/auth'
 import { useActiveBusiness } from '@/lib/business-context'
+import { BugReportModal } from '@/components/ui/BugReportModal'
 import type { BusinessRole } from '@/types'
 
 type NavItem = {
@@ -189,6 +190,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const { role } = useActiveBusiness()
   const pathname = usePathname()
   const router = useRouter()
+  const [showBugReport, setShowBugReport] = useState(false)
 
   function visible(items: NavItem[]) {
     return items.filter(
@@ -252,6 +254,15 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               <NavLink key={item.href} item={item} pathname={pathname} onClick={onClose} />
             ))}
             <button
+              onClick={() => setShowBugReport(true)}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Reportar un problema
+            </button>
+            <button
               onClick={handleLogout}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-gray-100 hover:text-foreground"
             >
@@ -260,6 +271,8 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               </svg>
               Cerrar sesión
             </button>
+
+            {showBugReport && <BugReportModal onClose={() => setShowBugReport(false)} />}
           </div>
         </nav>
       </aside>
