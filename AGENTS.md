@@ -138,6 +138,7 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `ConfirmDialog` | `iconBgClass`, `confirmClassName`, `pendingLabel`, `closeOnBackdrop`, `description: ReactNode` | description es div (admite strong) |
 | `StatCard` | `title`, `isLoading`, `caption`, `children` | skeleton animado cuando isLoading |
 | `PaymentToast` / `PaymentToastContainer` | — | stack bottom-right, max 3, auto-dismiss 5s, sonido |
+| `BugReportModal` | `onClose` | **Siempre usar `createPortal → document.body`** — el `translate-x-0` del sidebar crea stacking context y confina `position:fixed`. Campos: severidad, descripción, frecuencia, pasos, expected, adjuntos. Combina en `steps` al enviar. |
 
 ### src/components/layout/
 | Componente | Descripción |
@@ -331,8 +332,6 @@ Repo separado, deploy en `admin.pay-alert.com.ar` (Vercel — DNS gestionado por
 - Sección en landing o `/about` presentando a Guillermo Andrada (https://ga-software.dev) y la oferta de servicios
 - Decidir: sección de scroll en la landing actual o página separada `/about`
 
-### Prioridad 4 — Reporte de bugs (FE)
-- Botón "Reportar un problema" en el dashboard (menú de usuario o footer)
-- Modal con descripción, severidad, pasos para reproducir
-- Consume `POST /api/v1/bugs` (endpoint nuevo en BE)
-- No requiere auth para poder reportar también desde la landing
+### ✅ Completado (2026-06-17 — sesión 11) — Reporte de bugs (FE)
+- `BugReportModal` + botón en Sidebar sobre "Cerrar sesión"
+- Portal a `document.body` para evitar confinamiento por `transform` del sidebar
