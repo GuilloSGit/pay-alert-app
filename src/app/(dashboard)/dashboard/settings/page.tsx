@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { api, ApiError } from '@/lib/api'
 import { updateUser } from '@/lib/auth'
 import { useActiveBusiness } from '@/lib/business-context'
@@ -708,6 +709,7 @@ function MpConnectSection() {
   const [showDisconnect, setShowDisconnect] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [disconnectError, setDisconnectError] = useState<string | null>(null)
+  const [showMpGuide, setShowMpGuide] = useState(false)
 
   const { data: connection, isLoading } = useQuery({
     queryKey: ['mp-connect', businessId],
@@ -813,18 +815,13 @@ function MpConnectSection() {
                   placeholder="APP_USR-..."
                   required
                 />
-                <p className="text-xs text-muted">
-                  Obtené tu token en{' '}
-                  <a
-                    href="https://www.mercadopago.com.ar/developers/panel/app"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    Mercado Pago Developers
-                  </a>
-                  {' '}→ Tu aplicación → Credenciales de producción → Access Token.
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowMpGuide(true)}
+                  className="self-start text-xs text-primary underline underline-offset-2 transition-opacity hover:opacity-75"
+                >
+                  ¿Cómo obtengo el token?
+                </button>
 
                 {connectError && (
                   <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -864,6 +861,77 @@ function MpConnectSection() {
               </p>
             )}
           </div>
+        )}
+
+        {showMpGuide && (
+          <SlideOver title="Cómo conectar Mercado Pago" onClose={() => setShowMpGuide(false)}>
+            <div className="flex flex-col gap-6 overflow-y-auto px-6 py-6">
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-medium text-amber-900">Importante</p>
+                <p className="mt-1 text-sm text-amber-800">
+                  Necesitás un <strong>Access Token de producción</strong>. El token de prueba (test) no funciona para cobros reales ni para recibir notificaciones.
+                </p>
+              </div>
+
+              <ol className="flex flex-col gap-6">
+                <li className="flex gap-4">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">1</span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-semibold text-foreground">Crear una aplicación en MP Developers</p>
+                    <p className="text-sm text-muted">
+                      Ingresá a{' '}
+                      <a
+                        href="https://www.mercadopago.com.ar/developers/panel/app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline underline-offset-2"
+                      >
+                        mercadopago.com.ar/developers/panel/app
+                      </a>
+                      {' '}y hacé click en <strong>Crear aplicación</strong>.
+                    </p>
+                    <p className="text-sm text-muted">
+                      Completá el nombre (puede ser cualquiera, ej. "Pay Alert") y aceptá los términos.
+                    </p>
+                  </div>
+                </li>
+
+                <li className="flex gap-4">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">2</span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-semibold text-foreground">Copiar el Access Token de producción</p>
+                    <p className="text-sm text-muted">
+                      Dentro de tu aplicación, andá a <strong>Credenciales</strong> → <strong>Producción</strong>.
+                    </p>
+                    <p className="text-sm text-muted">
+                      Copiá el campo <strong>Access Token</strong>. Empieza con <code className="rounded bg-muted/20 px-1 font-mono text-xs">APP_USR-</code>
+                    </p>
+                  </div>
+                </li>
+
+                <li className="flex gap-4">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">3</span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-semibold text-foreground">Pegarlo en Pay Alert</p>
+                    <p className="text-sm text-muted">
+                      Cerrá esta guía, pegá el token en el campo <strong>Access Token de Mercado Pago</strong> y hacé click en <strong>Conectar</strong>.
+                    </p>
+                  </div>
+                </li>
+              </ol>
+
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMpGuide(false)}
+                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </SlideOver>
         )}
 
         {showDisconnect && (
