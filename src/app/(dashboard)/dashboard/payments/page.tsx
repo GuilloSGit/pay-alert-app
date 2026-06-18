@@ -382,7 +382,7 @@ export default function PaymentsPage() {
             </svg>
             <input
               type="text"
-              placeholder="Nombre, email, ID de MP..."
+              placeholder="Nombre, email, ID de pago..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary sm:w-64"
