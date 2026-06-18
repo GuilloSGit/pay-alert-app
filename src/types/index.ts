@@ -47,6 +47,7 @@ export interface Plan {
   dailySummary: boolean
   alertByAmount: boolean
   dataExport: boolean
+  closures: boolean
   outboundWebhooks: boolean
 }
 

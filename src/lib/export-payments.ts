@@ -237,19 +237,18 @@ export async function downloadPdf(
       10: { cellWidth: 24 },
     },
     margin: { left: 10, right: 10 },
-    didDrawPage: (data) => {
-      // Footer con número de página
-      const pageCount = doc.getNumberOfPages()
-      doc.setFontSize(7)
-      doc.setTextColor(150)
-      doc.text(
-        `Página ${data.pageNumber} de ${pageCount}`,
-        doc.internal.pageSize.getWidth() - 10,
-        doc.internal.pageSize.getHeight() - 5,
-        { align: 'right' },
-      )
-    },
   })
+
+  // Segunda pasada: ahora que autoTable terminó, el total de páginas es correcto
+  const totalPages = doc.getNumberOfPages()
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(7)
+    doc.setTextColor(150)
+    doc.text(`Página ${i} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' })
+  }
 
   doc.save(filename)
 }

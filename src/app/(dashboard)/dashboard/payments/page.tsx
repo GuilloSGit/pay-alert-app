@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
@@ -64,6 +64,29 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 function formatPaymentMethod(method: string | null | undefined) {
   if (!method) return '—'
   return PAYMENT_METHOD_LABELS[method] ?? method
+}
+
+function getDayKey(dateStr: string | null | undefined): string {
+  if (!dateStr) return 'unknown'
+  return new Date(dateStr).toDateString()
+}
+
+function formatDividerDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return 'Fecha desconocida'
+  const date = new Date(dateStr)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  if (sameDay(date, today)) return 'Hoy'
+  if (sameDay(date, yesterday)) return 'Ayer'
+  return new Intl.DateTimeFormat('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    ...(date.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}),
+  }).format(date)
 }
 
 function formatAmount(amount: string, currency: string) {
@@ -472,64 +495,88 @@ export default function PaymentsPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">ID MP</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
-                  {payments.map((p) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => setSelectedPayment(p)}
-                      className={`cursor-pointer transition-colors hover:bg-blue-50 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
-                    >
-                      <td className="px-6 py-4">
-                        <Badge className={STATUS_CLASSES[p.status]}>{STATUS_LABELS[p.status]}</Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium text-foreground tabular-nums">
-                        {formatAmount(p.amount, p.currency)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {p.payerName || p.payerEmail ? (
-                          <div>
-                            {p.payerName && <p className="font-medium text-foreground">{p.payerName}</p>}
-                            {p.payerEmail && <p className="text-xs text-muted">{p.payerEmail}</p>}
-                          </div>
-                        ) : (
-                          <span className="text-muted">—</span>
+                <tbody>
+                  {payments.map((p, idx) => {
+                    const dateStr = p.paidAt ?? p.receivedAt
+                    const prevDateStr = idx > 0 ? (payments[idx - 1].paidAt ?? payments[idx - 1].receivedAt) : null
+                    const showDivider = getDayKey(dateStr) !== getDayKey(prevDateStr)
+                    return (
+                      <Fragment key={p.id}>
+                        {showDivider && (
+                          <tr>
+                            <td colSpan={6} className="border-b border-t border-border bg-gray-50 px-6 py-2 text-xs font-semibold text-muted first-letter:uppercase">
+                              {formatDividerDate(dateStr)}
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-muted">{formatPaymentMethod(p.paymentMethod)}</td>
-                      <td className="px-6 py-4 text-muted whitespace-nowrap">
-                        {formatDate(p.paidAt ?? p.receivedAt)}
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs text-muted">{p.mpPaymentId}</td>
-                    </tr>
-                  ))}
+                        <tr
+                          onClick={() => setSelectedPayment(p)}
+                          className={`cursor-pointer border-b border-border transition-colors hover:bg-blue-50 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
+                        >
+                          <td className="px-6 py-4">
+                            <Badge className={STATUS_CLASSES[p.status]}>{STATUS_LABELS[p.status]}</Badge>
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium text-foreground tabular-nums">
+                            {formatAmount(p.amount, p.currency)}
+                          </td>
+                          <td className="px-6 py-4">
+                            {p.payerName || p.payerEmail ? (
+                              <div>
+                                {p.payerName && <p className="font-medium text-foreground">{p.payerName}</p>}
+                                {p.payerEmail && <p className="text-xs text-muted">{p.payerEmail}</p>}
+                              </div>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-muted">{formatPaymentMethod(p.paymentMethod)}</td>
+                          <td className="px-6 py-4 text-muted whitespace-nowrap">
+                            {formatDate(p.paidAt ?? p.receivedAt)}
+                          </td>
+                          <td className="px-6 py-4 font-mono text-xs text-muted">{p.mpPaymentId}</td>
+                        </tr>
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Vista card — mobile */}
-            <div className="divide-y divide-border sm:hidden">
-              {payments.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedPayment(p)}
-                  className={`w-full px-4 py-4 text-left transition-colors hover:bg-blue-50 active:bg-blue-100 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-base font-bold text-foreground tabular-nums">
-                      {formatAmount(p.amount, p.currency)}
-                    </span>
-                    <Badge className={STATUS_CLASSES[p.status]}>{STATUS_LABELS[p.status]}</Badge>
-                  </div>
-                  <p className="mt-1.5 truncate text-sm text-muted">
-                    {p.payerName ?? p.payerEmail ?? 'Pagador anónimo'}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-                    <span className="whitespace-nowrap">{formatDate(p.paidAt ?? p.receivedAt)}</span>
-                    <span>·</span>
-                    <span>{formatPaymentMethod(p.paymentMethod)}</span>
-                  </div>
-                </button>
-              ))}
+            <div className="sm:hidden">
+              {payments.map((p, idx) => {
+                const dateStr = p.paidAt ?? p.receivedAt
+                const prevDateStr = idx > 0 ? (payments[idx - 1].paidAt ?? payments[idx - 1].receivedAt) : null
+                const showDivider = getDayKey(dateStr) !== getDayKey(prevDateStr)
+                return (
+                  <Fragment key={p.id}>
+                    {showDivider && (
+                      <div className="border-b border-t border-border bg-gray-50 px-4 py-2 text-xs font-semibold text-muted first-letter:uppercase">
+                        {formatDividerDate(dateStr)}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setSelectedPayment(p)}
+                      className={`w-full border-b border-border px-4 py-4 text-left transition-colors hover:bg-blue-50 active:bg-blue-100 ${selectedPayment?.id === p.id ? 'bg-blue-50' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-base font-bold text-foreground tabular-nums">
+                          {formatAmount(p.amount, p.currency)}
+                        </span>
+                        <Badge className={STATUS_CLASSES[p.status]}>{STATUS_LABELS[p.status]}</Badge>
+                      </div>
+                      <p className="mt-1.5 truncate text-sm text-muted">
+                        {p.payerName ?? p.payerEmail ?? 'Pagador anónimo'}
+                      </p>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                        <span className="whitespace-nowrap">{formatDate(p.paidAt ?? p.receivedAt)}</span>
+                        <span>·</span>
+                        <span>{formatPaymentMethod(p.paymentMethod)}</span>
+                      </div>
+                    </button>
+                  </Fragment>
+                )
+              })}
             </div>
 
             <div className="flex items-center justify-between border-t border-border px-6 py-4">
