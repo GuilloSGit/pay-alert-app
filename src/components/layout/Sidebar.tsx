@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearSession } from '@/lib/auth'
+import { api } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import { BugReportModal } from '@/components/ui/BugReportModal'
 import type { BusinessRole } from '@/types'
@@ -198,8 +199,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     )
   }
 
-  function handleLogout() {
+  async function handleLogout() {
     onClose()
+    try {
+      await api.post('/api/v1/auth/logout', {})
+    } catch {}
     clearSession()
     router.push('/login')
   }
