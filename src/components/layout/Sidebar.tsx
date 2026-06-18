@@ -9,6 +9,8 @@ import { useActiveBusiness } from '@/lib/business-context'
 import { BugReportModal } from '@/components/ui/BugReportModal'
 import type { BusinessRole } from '@/types'
 
+export const ONBOARDING_DONE_KEY = 'pa_onboarding_done'
+
 type NavItem = {
   href: string
   label: string
@@ -85,6 +87,22 @@ const BUSINESS_NAV: NavItem[] = [
   },
 ]
 
+const OWNER_ROLES = ['OWNER'] as const satisfies readonly BusinessRole[]
+
+const OWNER_NAV: NavItem[] = [
+  {
+    href: '/dashboard/facturacion',
+    label: 'Facturación',
+    roles: OWNER_ROLES,
+    exists: true,
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+]
+
 const ACCOUNT_NAV: NavItem[] = [
   {
     href: '/dashboard/settings',
@@ -99,6 +117,42 @@ const ACCOUNT_NAV: NavItem[] = [
     ),
   },
 ]
+
+// ─── Wizard Nav Item ─────────────────────────────────────────────────────────
+
+function WizardNavItem({ onClick }: { onClick?: () => void }) {
+  const pathname = usePathname()
+  const active = pathname.startsWith('/onboarding')
+
+  return (
+    <Link
+      href="/onboarding"
+      onClick={onClick}
+      className={`wizard-nav-item relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition-all ${active ? 'ring-2 ring-white/40' : ''}`}
+    >
+      {/* AI-tech icon — sparkle circuit */}
+      <svg
+        className="h-5 w-5 shrink-0 drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 2l1.5 3.5L17 7l-3.5 1.5L12 12l-1.5-3.5L7 7l3.5-1.5L12 2z" />
+        <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14z" />
+        <path d="M5 17l.6 1.4L7 19l-1.4.6L5 21l-.6-1.4L3 19l1.4-.6L5 17z" />
+        <line x1="12" y1="12" x2="19" y2="14" strokeOpacity={0.4} />
+        <line x1="12" y1="12" x2="5" y2="17" strokeOpacity={0.4} />
+      </svg>
+      <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">Wizard de Inicio</span>
+      <span className="ml-auto rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wider">
+        NUEVO
+      </span>
+    </Link>
+  )
+}
 
 // ─── Business Switcher ────────────────────────────────────────────────────────
 
@@ -203,6 +257,10 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const pathname = usePathname()
   const router = useRouter()
   const [showBugReport, setShowBugReport] = useState(false)
+  const [showWizard] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !localStorage.getItem(ONBOARDING_DONE_KEY)
+  })
 
   function visible(items: NavItem[]) {
     return items.filter(
@@ -250,6 +308,12 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         <BusinessSwitcher />
 
         <nav className="flex flex-1 flex-col p-3">
+          {showWizard && (
+            <div className="mb-3">
+              <WizardNavItem onClick={onClose} />
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
             <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted/60">
               Negocio
@@ -258,6 +322,17 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               <NavLink key={item.href} item={item} pathname={pathname} onClick={onClose} />
             ))}
           </div>
+
+          {visible(OWNER_NAV).length > 0 && (
+            <div className="mt-4 flex flex-col gap-1">
+              <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted/60">
+                Finanzas
+              </p>
+              {visible(OWNER_NAV).map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} onClick={onClose} />
+              ))}
+            </div>
+          )}
 
           <div className="flex-1" />
 

@@ -35,7 +35,7 @@ export function SubscriptionGate({ status, role }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-muted">
           {isCancelled
             ? 'Cancelaste tu suscripción. Podés reactivarla cuando quieras sin perder tus datos ni historial.'
-            : 'Tu período de prueba finalizó. Activá un plan para seguir usando Pay Alert y mantener tus datos.'}
+            : 'Tu cuenta fue suspendida por falta de pago o vencimiento del período de prueba. Tus datos e historial están guardados.'}
         </p>
 
         {isOwner ? (
@@ -43,7 +43,7 @@ export function SubscriptionGate({ status, role }: Props) {
             href="/dashboard/settings#suscripcion"
             className="mt-6 inline-block rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
-            {isCancelled ? 'Reactivar plan' : 'Activar plan'}
+            {isCancelled ? 'Reactivar plan' : 'Reactivar acceso'}
           </Link>
         ) : (
           <p className="mt-6 rounded-xl bg-gray-50 px-4 py-3 text-sm text-muted">

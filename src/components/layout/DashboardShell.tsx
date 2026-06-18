@@ -90,7 +90,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           setBusinessName(first.name)
           setRole(first.role)
         } else {
-          router.replace('/dashboard/businesses')
+          router.replace('/onboarding')
         }
       })
       .catch(() => {})

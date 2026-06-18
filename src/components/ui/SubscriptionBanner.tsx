@@ -69,15 +69,20 @@ export function SubscriptionBanner({ status, trialEndsAt, subscriptionWarning, r
       <div className="flex shrink-0 items-center justify-between gap-4 border-b border-red-200 bg-red-50 px-6 py-3">
         <p className="text-sm text-red-800">
           <span className="font-semibold">Pago rechazado.</span>
-          {' '}Actualizá tu método de pago para evitar la suspensión de tu cuenta.
+          {' '}
+          {isOwner
+            ? 'Mercado Pago reintentará el cobro. Si persiste, actualizá el método de pago desde tu cuenta de MP.'
+            : 'Avisale al dueño del comercio — el pago mensual no pudo procesarse.'}
         </p>
         {isOwner && (
-          <Link
-            href="/dashboard/settings#suscripcion"
+          <a
+            href="https://www.mercadopago.com.ar/subscriptions"
+            target="_blank"
+            rel="noopener noreferrer"
             className="shrink-0 rounded-lg bg-red-600 px-4 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
-            Gestionar suscripción →
-          </Link>
+            Ver en MP →
+          </a>
         )}
       </div>
     )

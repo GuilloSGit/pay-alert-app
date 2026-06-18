@@ -63,6 +63,29 @@ body {
   animation: fade-up 0.6s ease-out forwards;
 }
 
+/* ── Wizard onboarding iridescent ────────────────────────────────── */
+
+@keyframes iridescent {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 6px 0 rgba(139,92,246,.5), 0 0 12px 0 rgba(6,182,212,.3); }
+  50%       { box-shadow: 0 0 10px 2px rgba(139,92,246,.7), 0 0 20px 2px rgba(236,72,153,.4); }
+}
+
+.wizard-nav-item {
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6, #ec4899, #06b6d4);
+  background-size: 300% 300%;
+  animation: iridescent 4s ease infinite, neon-pulse 2.5s ease-in-out infinite;
+}
+
+.wizard-nav-item:hover {
+  filter: brightness(1.1);
+}
+
 .animate-fade-in {
   animation: fade-in 0.4s ease-out forwards;
 }
