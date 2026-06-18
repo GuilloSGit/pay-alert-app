@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register']
+const PUBLIC_PATHS = ['/login', '/register', '/developers']
 // Accessible with or without session — invitation links and password reset links must work for both new and existing users
 const OPEN_PATHS = ['/invitations/', '/forgot-password', '/reset-password/']
 

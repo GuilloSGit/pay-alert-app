@@ -262,6 +262,9 @@ export default function LandingPage() {
                 {label}
               </a>
             ))}
+            <Link href="/developers" className="text-sm font-medium text-muted transition-colors hover:text-foreground">
+              Developers
+            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -761,6 +764,13 @@ export default function LandingPage() {
                 <div className="flex flex-col gap-2">
                   <a href="#nosotros" className="text-sm text-muted transition-colors hover:text-foreground">Equipo</a>
                   <a href="https://ga-software.dev" target="_blank" rel="noopener noreferrer" className="text-sm text-muted transition-colors hover:text-foreground">ga-software.dev</a>
+                </div>
+              </div>
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Developers</p>
+                <div className="flex flex-col gap-2">
+                  <Link href="/developers" className="text-sm text-muted transition-colors hover:text-foreground">API Docs</Link>
+                  <Link href="/developers#webhooks" className="text-sm text-muted transition-colors hover:text-foreground">Webhooks</Link>
                 </div>
               </div>
             </div>
