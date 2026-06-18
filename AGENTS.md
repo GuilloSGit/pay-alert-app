@@ -79,6 +79,14 @@ El `Sidebar` incluye un componente `BusinessSwitcher` al tope:
 - Cierra con click fuera (listener `mousedown` en `useEffect` con `useRef<HTMLDivElement>`)
 - El `Sidebar` ya no recibe `role` como prop — usa `useActiveBusiness()` directamente
 
+### `fetchExportRows` — debe usar `NEXT_PUBLIC_API_URL`, no URL relativa
+`src/lib/export-payments.ts` hace un `fetch` nativo (no usa `api.ts`) porque necesita leer la respuesta como `text()` en vez de JSON. **Trampa:** si se usa una URL relativa (`/api/v1/...`), funciona local (gracias al rewrite de `next.config.ts`) pero falla en producción (Vercel no tiene ese rewrite). Siempre usar `${BASE_URL}/api/v1/...` donde `BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'`.
+
+`fetchExportRows` también implementa su propio ciclo de refresh-retry:
+1. Si no hay token → `tryRefresh()` antes de hacer el fetch
+2. Si el fetch devuelve 401 → `tryRefresh()` y reintenta una vez
+El token ya no se pasa como parámetro — se maneja internamente.
+
 ### `output: 'standalone'` — solo para Docker
 `next.config.ts` puede tener `output: 'standalone'` para builds Docker multi-stage.
 **No es necesario para Vercel** (el deploy actual usa Vercel, que ignora esta opción).
