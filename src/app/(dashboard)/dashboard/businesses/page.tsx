@@ -36,6 +36,20 @@ interface SummaryResponse {
   data: { subscription: SubscriptionInfo | null }
 }
 
+const BUSINESS_CATEGORIES = [
+  { slug: 'retail',       label: 'Retail / Indumentaria' },
+  { slug: 'gastronomy',   label: 'Gastronomía' },
+  { slug: 'hospitality',  label: 'Hotelería / Alojamiento' },
+  { slug: 'services',     label: 'Servicios profesionales' },
+  { slug: 'health',       label: 'Salud / Bienestar' },
+  { slug: 'beauty',       label: 'Peluquería / Estética' },
+  { slug: 'kiosk',        label: 'Kiosco / Almacén' },
+  { slug: 'ecommerce',    label: 'E-commerce / Venta online' },
+  { slug: 'education',    label: 'Educación / Capacitación' },
+  { slug: 'transport',    label: 'Transporte / Logística' },
+  { slug: 'other',        label: 'Otro' },
+] as const
+
 const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
   TRIALING: 'Período de prueba',
   ACTIVE: 'Activo',
@@ -226,15 +240,17 @@ export default function BusinessesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Categoría</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-foreground mb-1">Rubro</label>
+                <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value)}
                   className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  maxLength={50}
-                  placeholder="ej. Gastronomía, Retail, Servicios…"
-                />
+                >
+                  <option value="">Sin especificar</option>
+                  {BUSINESS_CATEGORIES.map((c) => (
+                    <option key={c.slug} value={c.slug}>{c.label}</option>
+                  ))}
+                </select>
               </div>
               {editError && <p className="text-sm text-red-600">{editError}</p>}
               <div className="flex items-center gap-3">
@@ -268,8 +284,10 @@ export default function BusinessesPage() {
               )}
               {business?.category && (
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Categoría</p>
-                  <Badge className="mt-1 bg-gray-100 text-gray-700">{business.category}</Badge>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Rubro</p>
+                  <Badge className="mt-1 bg-gray-100 text-gray-700">
+                    {BUSINESS_CATEGORIES.find((c) => c.slug === business.category)?.label ?? business.category}
+                  </Badge>
                 </div>
               )}
               <div>
