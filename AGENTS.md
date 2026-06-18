@@ -157,10 +157,10 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 |---|---|
 | `PageShell` | `{ title, children, className? }` — wrapper flex + Header + main `p-4 sm:p-6`. Usar en todas las páginas del dashboard. |
 | `Header` | `{ title }` — h-16 **shrink-0**; consume `openSidebar()` de `useActiveBusiness()` para el hamburger `lg:hidden`; nombre usuario `hidden sm:block`; padding `px-4 lg:px-6`. |
-| `Sidebar` | Props: `{ isOpen: boolean; onClose: () => void }`. Drawer `fixed inset-y-0 left-0 z-50` en mobile con overlay `z-40`; `lg:static lg:translate-x-0` en desktop. Dos secciones: `BUSINESS_NAV` / `ACCOUNT_NAV` con labels "NEGOCIO"/"CUENTA". Para agregar página: agregar a `BUSINESS_NAV` o `ACCOUNT_NAV` con `exists: true`. NavLinks llaman `onClose` al clickear (cierra drawer en mobile). |
-| `DashboardShell` | BusinessContext provider + `sidebarOpen` state + fetch `/subscription` por businessId + listeners `subscription:inactive`/`subscription:warning` + `mpTokenInvalid` state (bool) + DeviceLimitModal + PaymentToastContainer + SubscriptionBanner + SubscriptionGate |
-| `SubscriptionBanner` | Banner no bloqueante: naranja 1º prioridad si `mpTokenInvalid` (link "Reconectar →" a `/dashboard/settings#mp-connect`, solo OWNER); amarillo (TRIALING ≤7 días); rojo (PAST_DUE). Vive antes de `{children}` en el shell. |
-| `SubscriptionGate` | Overlay `absolute inset-0 z-40 backdrop-blur-sm` para SUSPENDED/CANCELLED. Sidebar queda interactivo. CTA varía por rol. |
+| `Sidebar` | Props: `{ isOpen: boolean; onClose: () => void }`. Drawer fixed mobile, static desktop. Secciones: "NEGOCIO" / "FINANZAS" (OWNER: Facturación) / "CUENTA". **Wizard de Inicio:** item iridiscente (gradiente cyan→violeta→fucsia, animación `iridescent` + `neon-pulse` en `globals.css`) visible mientras `!localStorage['pa_onboarding_done']`. Inicializado con lazy `useState(() => !localStorage.getItem(...))` (safe SSR). `ONBOARDING_DONE_KEY` exportado como constante para usar en `/onboarding/page.tsx`. |
+| `DashboardShell` | BusinessContext provider. Si `businesses.length === 0` al cargar → `router.replace('/onboarding')`. Resto: set businessId/name/role, fetch suscripción, WS, DeviceLimitModal, toasts. |
+| `SubscriptionBanner` | Naranja si `mpTokenInvalid` (solo OWNER ve "Reconectar →"); amarillo (TRIALING ≤7 días); rojo (PAST_DUE): OWNER ve mensaje + link a `mercadopago.com.ar/subscriptions`, non-OWNER ve "Avisale al dueño del comercio". |
+| `SubscriptionGate` | Overlay para SUSPENDED/CANCELLED. Texto genérico para SUSPENDED (no asume trial). CTA "Reactivar acceso" → settings#suscripcion. |
 
 ---
 
@@ -175,11 +175,19 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/register` | `src/app/(auth)/register/page.tsx` | ✅ + ojo toggle |
 | `/forgot-password` | `src/app/(auth)/forgot-password/page.tsx` | ✅ |
 | `/reset-password/[token]` | `src/app/(auth)/reset-password/[token]/page.tsx` | ✅ |
+| `/` | `src/app/page.tsx` | ✅ Landing |
+| `/login` | `src/app/(auth)/login/page.tsx` | ✅ |
+| `/register` | `src/app/(auth)/register/page.tsx` | ✅ |
+| `/forgot-password` | `src/app/(auth)/forgot-password/page.tsx` | ✅ |
+| `/reset-password/[token]` | `src/app/(auth)/reset-password/[token]/page.tsx` | ✅ |
+| `/onboarding` | `src/app/onboarding/page.tsx` | ✅ Wizard 3 pasos standalone (sin sidebar). Skip inteligente: detecta negocio+MP al cargar, salta al paso correcto. `localStorage['pa_onboarding_done']` = controla visibilidad del sidebar item. |
 | `/dashboard` | `src/app/(dashboard)/dashboard/page.tsx` | ✅ Stats + últimos pagos |
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
-| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio (título dinámico = businessName), MP, suscripción + banner onboarding. Campo "Rubro": `<select>` con 11 opciones (slug value, label legible); en vista muestra label via `BUSINESS_CATEGORIES.find()` |
+| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP, suscripción. Rubro: select 11 categorías. |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
-| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Mis comercios + MP Connect + Suscripción + Perfil + Seguridad + Dispositivos FCM |
+| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + Seguridad + Dispositivos + MP Connect + Suscripción con plan picker inline |
+| `/dashboard/facturacion` | `src/app/(dashboard)/dashboard/facturacion/page.tsx` | ✅ OWNER only. Historial invoices paginado. Descarga PDF con `src/lib/invoice-pdf.ts` (jsPDF dinámico). |
+| `/dashboard/cierres` | `src/app/(dashboard)/dashboard/cierres/page.tsx` | ✅ Tabla cierres con blur-gate por plan |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
 | `/suscripcion/resultado` | `src/app/suscripcion/resultado/page.tsx` | ✅ Página pública post-checkout MP |
 
