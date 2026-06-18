@@ -252,6 +252,7 @@ export default function LandingPage() {
               ['#features', 'Características'],
               ['#how-it-works', 'Cómo funciona'],
               ['#pricing', 'Planes'],
+              ['#nosotros', 'Nosotros'],
             ].map(([href, label]) => (
               <a
                 key={href}
@@ -590,6 +591,96 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── Nosotros ────────────────────────────────────────────────────── */}
+        <section id="nosotros" className="border-y border-border bg-card py-24">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="mb-14 max-w-xl">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">
+                Nosotros
+              </p>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                Hecho por alguien que entiende el problema
+              </h2>
+              <p className="text-base text-muted">
+                Pay Alert nació de una necesidad real: darle a los comerciantes argentinos
+                una forma confiable de verificar pagos sin depender de capturas de pantalla.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-10 md:flex-row md:items-start md:gap-16">
+              {/* Card fundador */}
+              <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-8">
+                <div className="mb-5 flex items-center gap-4">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-foreground text-xl font-bold text-white">
+                    GA
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Guillermo Andrada</p>
+                    <p className="text-sm text-muted">Fundador y desarrollador</p>
+                    <a
+                      href="https://ga-software.dev"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      ga-software.dev
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-muted">
+                  Desarrollador full-stack con foco en productos que resuelven problemas concretos.
+                  Pay Alert es uno de ellos — construido con la misma atención al detalle que
+                  aplico en cada proyecto personalizado.
+                </p>
+              </div>
+
+              {/* Servicios */}
+              <div className="flex-1">
+                <p className="mb-5 text-sm font-semibold uppercase tracking-widest text-muted">
+                  ¿Necesitás algo a medida?
+                </p>
+                <h3 className="mb-4 text-xl font-bold text-foreground">
+                  Desarrollo de software personalizado
+                </h3>
+                <p className="mb-6 text-base leading-relaxed text-muted">
+                  Si tu negocio necesita una solución que no existe en el mercado,
+                  puedo construirla. Desde APIs e integraciones hasta aplicaciones web
+                  completas — con el mismo stack y criterio de calidad que ves acá.
+                </p>
+                <div className="mb-8 grid gap-3 sm:grid-cols-2">
+                  {[
+                    'APIs e integraciones a medida',
+                    'Aplicaciones web y dashboards',
+                    'Integraciones con Mercado Pago',
+                    'Automatizaciones y bots',
+                    'Consultoría técnica',
+                    'Sistemas internos para equipos',
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-2.5 text-sm text-muted">
+                      <Check className="h-4 w-4 shrink-0 text-primary" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <a
+                  href="https://ga-software.dev"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-transparent px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface"
+                >
+                  Ver portfolio y servicios
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── Final CTA ───────────────────────────────────────────────────── */}
         <section className="bg-[#040c07] py-20">
           <div className="hero-dots relative overflow-hidden">
@@ -663,6 +754,13 @@ export default function LandingPage() {
                   <Link href="/login" className="text-sm text-muted transition-colors hover:text-foreground">Iniciar sesión</Link>
                   <Link href="/register" className="text-sm text-muted transition-colors hover:text-foreground">Registrarse</Link>
                   <a href="https://wa.me/543876295801" target="_blank" rel="noopener noreferrer" className="text-sm text-muted transition-colors hover:text-foreground">Soporte</a>
+                </div>
+              </div>
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Nosotros</p>
+                <div className="flex flex-col gap-2">
+                  <a href="#nosotros" className="text-sm text-muted transition-colors hover:text-foreground">Equipo</a>
+                  <a href="https://ga-software.dev" target="_blank" rel="noopener noreferrer" className="text-sm text-muted transition-colors hover:text-foreground">ga-software.dev</a>
                 </div>
               </div>
             </div>
