@@ -16,6 +16,7 @@ interface Props {
   businessName: string
   userName: string
   buildParams: () => URLSearchParams
+  locked?: boolean
 }
 
 const OPTIONS: { format: ExportFormat; label: string; description: string; icon: React.ReactNode }[] = [
@@ -51,10 +52,11 @@ const OPTIONS: { format: ExportFormat; label: string; description: string; icon:
   },
 ]
 
-export function ExportDropdown({ businessId, businessName, userName, buildParams }: Props) {
+export function ExportDropdown({ businessId, businessName, userName, buildParams, locked = false }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState<ExportFormat | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -96,6 +98,33 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
   }
 
   const isLoading = loading !== null
+
+  if (locked) {
+    return (
+      <div className="relative shrink-0">
+        <button
+          disabled
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Exportar
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+            Business
+          </span>
+        </button>
+        {showTooltip && (
+          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg">
+            <p className="text-xs font-medium text-foreground">Disponible en Plan Business</p>
+            <p className="mt-0.5 text-xs text-muted">Exportá tus pagos en CSV, Excel o PDF empresarial.</p>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div ref={ref} className="relative shrink-0">

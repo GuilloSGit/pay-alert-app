@@ -337,12 +337,13 @@ export default function PaymentsPage() {
           <h2 className="text-xl font-semibold text-foreground">Historial de pagos</h2>
           <p className="mt-0.5 text-sm text-muted">Todos los pagos recibidos en tu negocio</p>
         </div>
-        {planFeatures?.dataExport && businessId && (
+        {businessId && (
           <ExportDropdown
             businessId={businessId}
             businessName={businessName ?? 'Mi Comercio'}
             userName={userName}
             buildParams={buildParams}
+            locked={planFeatures !== undefined && !planFeatures.dataExport}
           />
         )}
       </div>
