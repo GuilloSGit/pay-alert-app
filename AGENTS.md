@@ -52,6 +52,10 @@ RUN npm run build
 - El cliente llama directo al backend. CORS habilitado en el backend con `credentials: true`.
 - Siempre `credentials: 'include'` en los fetches para que el browser mande la cookie `refresh_token` al endpoint de refresh.
 - El refresh es transparente: un 401 dispara `POST /api/v1/auth/refresh` y reintenta automáticamente. Si el refresh también falla, redirige a `/login`.
+- **⚠️ `api.post(path)` sin body → 400 en Fastify 5:** el cliente siempre agrega `Content-Type: application/json` en POST. Si no se pasa body, `JSON.stringify(undefined)` = `undefined` (sin body), pero el header queda → Fastify 5 rechaza con 400. Siempre pasar `{}` cuando no hay body real: `api.post(path, {})`.
+
+### Logout — conectado al API
+`handleLogout()` en `Sidebar.tsx` es `async` y llama `api.post('/api/v1/auth/logout', {})` antes de `clearSession()`. El BE revoca el refresh token en DB (sin esto, la cookie httpOnly httpOnly sigue válida hasta expirar ~7d). El `try/catch` garantiza que el logout local siempre ocurra aunque el API no responda.
 
 ### Sidebar — cómo agregar una nueva página
 1. Crear la página en `src/app/(dashboard)/ruta/page.tsx`
