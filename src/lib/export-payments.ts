@@ -1,4 +1,8 @@
 import * as XLSX from 'xlsx'
+import { getAccessToken, clearSession } from './auth'
+import { tryRefresh } from './api'
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 export type ExportFormat = 'csv' | 'xlsx' | 'pdf'
 
@@ -69,12 +73,37 @@ function humanizeRows(rows: string[][]): string[][] {
 export async function fetchExportRows(
   businessId: string,
   params: URLSearchParams,
-  token: string | null,
 ): Promise<string[][]> {
-  const res = await fetch(`/api/v1/businesses/${businessId}/payments/export?${params}`, {
-    credentials: 'include',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
+  let token = getAccessToken()
+
+  if (!token) {
+    const refreshed = await tryRefresh()
+    if (!refreshed) {
+      clearSession()
+      if (typeof window !== 'undefined') window.location.href = '/login'
+      throw new Error('Session expired')
+    }
+    token = getAccessToken()
+  }
+
+  const doFetch = (tok: string | null) =>
+    fetch(`${BASE_URL}/api/v1/businesses/${businessId}/payments/export?${params}`, {
+      credentials: 'include',
+      headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+    })
+
+  let res = await doFetch(token)
+
+  if (res.status === 401) {
+    const refreshed = await tryRefresh()
+    if (!refreshed) {
+      clearSession()
+      if (typeof window !== 'undefined') window.location.href = '/login'
+      throw new Error('Session expired')
+    }
+    res = await doFetch(getAccessToken())
+  }
+
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
   const text = await res.text()
   return humanizeRows(parseCsv(text))

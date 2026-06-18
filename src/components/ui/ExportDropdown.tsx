@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Spinner } from './Spinner'
-import { getAccessToken } from '@/lib/auth'
 import {
   type ExportFormat,
   fetchExportRows,
@@ -76,10 +75,9 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
       const params = buildParams()
       params.delete('cursor')
       params.delete('limit')
-      const token = getAccessToken()
       const date = new Date().toISOString().slice(0, 10)
 
-      const rows = await fetchExportRows(businessId, params, token)
+      const rows = await fetchExportRows(businessId, params)
 
       if (format === 'csv') {
         const csvText = rows.map((r) => r.map((c) => (c.includes(',') || c.includes('"') ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\n')

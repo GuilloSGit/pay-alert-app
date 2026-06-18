@@ -1037,7 +1037,7 @@ function MpConnectSection() {
                       {' '}y hacé click en <strong>Crear aplicación</strong>.
                     </p>
                     <p className="text-sm text-muted">
-                      Completá el nombre (puede ser cualquiera, ej. "Pay Alert") y aceptá los términos.
+                      Completá el nombre (puede ser cualquiera, ej. &quot;Pay Alert&quot;) y aceptá los términos.
                     </p>
                   </div>
                 </li>
