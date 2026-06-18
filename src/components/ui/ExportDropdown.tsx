@@ -77,20 +77,12 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
       const token = getAccessToken()
       const date = new Date().toISOString().slice(0, 10)
 
-      if (format === 'csv') {
-        const res = await fetch(`/api/v1/businesses/${businessId}/payments/export?${params}`, {
-          credentials: 'include',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
-        if (!res.ok) throw new Error(`${res.status}`)
-        const text = await res.text()
-        downloadCsvBlob(text, `pagos-${date}.csv`)
-        return
-      }
-
       const rows = await fetchExportRows(businessId, params, token)
 
-      if (format === 'xlsx') {
+      if (format === 'csv') {
+        const csvText = rows.map((r) => r.map((c) => (c.includes(',') || c.includes('"') ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\n')
+        downloadCsvBlob(csvText, `pagos-${date}.csv`)
+      } else if (format === 'xlsx') {
         downloadXlsx(rows, `pagos-${date}.xlsx`, businessName)
       } else {
         await downloadPdf(rows, `pagos-${date}.pdf`, businessName, userName)

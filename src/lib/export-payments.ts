@@ -7,6 +7,63 @@ const HEADERS = [
   'Pagador', 'Email Pagador', 'Metodo de Pago', 'Fecha de Pago', 'Fecha Recepcion',
 ]
 
+// ── Traducciones ──────────────────────────────────────────────────────────────
+
+const METHOD_LABELS: Record<string, string> = {
+  money_transfer: 'Transferencia',
+  regular_payment: 'QR / Cobro',
+  account_money: 'Cuenta MP',
+  debit_card: 'Tarjeta débito',
+  credit_card: 'Tarjeta crédito',
+  bank_transfer: 'Transferencia bancaria',
+  ticket: 'Cupón / Efectivo',
+  atm: 'ATM',
+  digital_currency: 'Billetera virtual',
+  prepaid_card: 'Tarjeta prepago',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pendiente',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+  CANCELLED: 'Cancelado',
+  REFUNDED: 'Reembolsado',
+}
+
+// Índices de columnas según HEADERS
+const COL = { ESTADO: 4, METODO: 8, FECHA_PAGO: 9, FECHA_REC: 10 }
+
+function formatDate(iso: string): string {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso)
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    const hh = String(d.getHours()).padStart(2, '0')
+    const min = String(d.getMinutes()).padStart(2, '0')
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`
+  } catch {
+    return iso
+  }
+}
+
+function humanizeRows(rows: string[][]): string[][] {
+  if (rows.length === 0) return rows
+  const [header, ...data] = rows
+  return [
+    header,
+    ...data.map((row) => {
+      const r = [...row]
+      if (r[COL.ESTADO]) r[COL.ESTADO] = STATUS_LABELS[r[COL.ESTADO]] ?? r[COL.ESTADO]
+      if (r[COL.METODO]) r[COL.METODO] = METHOD_LABELS[r[COL.METODO]] ?? r[COL.METODO]
+      if (r[COL.FECHA_PAGO]) r[COL.FECHA_PAGO] = formatDate(r[COL.FECHA_PAGO])
+      if (r[COL.FECHA_REC]) r[COL.FECHA_REC] = formatDate(r[COL.FECHA_REC])
+      return r
+    }),
+  ]
+}
+
 // ── Fetch y parse del CSV del BE ─────────────────────────────────────────────
 
 export async function fetchExportRows(
@@ -20,7 +77,7 @@ export async function fetchExportRows(
   })
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
   const text = await res.text()
-  return parseCsv(text)
+  return humanizeRows(parseCsv(text))
 }
 
 function parseCsv(text: string): string[][] {
