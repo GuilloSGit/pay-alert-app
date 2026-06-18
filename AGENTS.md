@@ -219,7 +219,13 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 
 ### WebSocket tiempo real
 
-`DashboardShell` conecta automáticamente al WebSocket (`/api/v1/ws`) cuando el `businessId` está disponible. **No hay `?token=` en la URL** — el JWT se envía como primer mensaje una vez abierto el socket (`ws.onopen → ws.send({ type: 'auth', token })`). Si el servidor responde con close code `4001`, el hook llama `tryRefresh().then(connect)`.
+`DashboardShell` conecta automáticamente al WebSocket cuando el `businessId` está disponible. **Flujo auth v2 (desde sesión 14):** `connect()` es `async`:
+1. Llama `POST /api/v1/auth/ws-token` (Bearer JWT) → recibe UUID efímero (TTL 30s)
+2. Abre `new WebSocket('wss://...?token=<uuid>')` — el servidor valida y consume el token en el preHandler antes del upgrade
+3. `ws.onopen` no envía nada — auth ya fue validado server-side
+4. Si la conexión cae (cualquier close), reconecta con backoff exponencial (1s→30s) + nuevo POST /auth/ws-token
+
+`api.post` maneja automáticamente el refresh del access token si expiró. Si el refresh falla, redirige a `/login`.
 - Hook: `src/lib/use-payment-websocket.ts` — reconexión con exponential backoff (1s→30s). Actualiza el ref del callback con `useLayoutEffect` sin deps para evitar closures stale.
 - Toast: `src/components/ui/PaymentToast.tsx` — stack bottom-right, max 3, auto-dismiss 5s
 - **Sonido:** AudioContext singleton en `PaymentToast.tsx`. Se crea una sola vez y se desbloquea en el primer gesto del usuario (`click`/`keydown`/`touchstart`). Registrado en `PaymentToastContainer` via `useEffect`. No crear `new AudioContext()` en cada llamada — el browser lo bloquea por autoplay policy.
