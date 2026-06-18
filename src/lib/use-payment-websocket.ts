@@ -63,7 +63,7 @@ export function usePaymentWebSocket(
       // api.post maneja automáticamente el refresh del access token si expiró.
       let wsToken: string
       try {
-        const res = await api.post<{ data: { token: string } }>('/api/v1/auth/ws-token')
+        const res = await api.post<{ data: { token: string } }>('/api/v1/auth/ws-token', {})
         wsToken = res.data.token
       } catch {
         // Si el refresh también falló, api.post ya redirigió a /login.
