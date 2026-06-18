@@ -325,12 +325,13 @@ member@test.com / Test1234!  → MEMBER
 - **MP Connect UI** — sección en `/dashboard/settings#mp-connect` con 3 estados: conectado (ID MP + fecha + badge + botón "Desconectar"), desconectado (PasswordInput token + botón "Conectar"), token vencido (banner naranja + form reconexión). Códigos de error mapeados: `INVALID_MP_TOKEN` → mensaje específico, `MP_ACCOUNT_ALREADY_CONNECTED` → `err.message` del BE.
 - **WS `mp.token_invalid`** — `DashboardShell` maneja el mensaje → `setMpTokenInvalid(true)`. `SubscriptionBanner` muestra banner naranja con "Reconectar →" (solo OWNER). `switchBusiness` resetea a `false`.
 
-### ✅ Completado (2026-06-18 — sesión 16) — Exportación multi-formato
+### ✅ Completado (2026-06-18 — sesiones 16+17) — Exportación multi-formato + UX plan gate
 - `ExportDropdown` reemplaza el botón "Exportar CSV" con dropdown: CSV · Excel (XLSX) · PDF empresarial.
 - `src/components/ui/ExportDropdown.tsx` + `src/lib/export-payments.ts`
 - Librerías: `xlsx` (SheetJS) + `jspdf` + `jspdf-autotable`. PDF con importación dinámica.
 - `fetchExportRows()`: fetch al BE + parse CSV + humanización (método de pago, estado, fechas).
 - Exporta exactamente los registros del filtro activo (status, from, to, q).
+- **Prop `locked?: boolean`:** cuando `true`, muestra el botón disabled con badge ámbar "Business" y tooltip on hover. `payments/page.tsx` pasa `locked={planFeatures !== undefined && !planFeatures.dataExport}` — el botón siempre es visible, nunca se oculta.
 - **Gotcha:** `getUser()` de `auth.ts` para nombre del usuario — no `getAccessToken()`.
 
 ### Prioridad 3 — Features Business+
