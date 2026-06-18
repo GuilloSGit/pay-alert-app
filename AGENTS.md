@@ -177,7 +177,7 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/reset-password/[token]` | `src/app/(auth)/reset-password/[token]/page.tsx` | ✅ |
 | `/dashboard` | `src/app/(dashboard)/dashboard/page.tsx` | ✅ Stats + últimos pagos |
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
-| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio (título dinámico = businessName), MP, suscripción + banner onboarding |
+| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio (título dinámico = businessName), MP, suscripción + banner onboarding. Campo "Rubro": `<select>` con 11 opciones (slug value, label legible); en vista muestra label via `BUSINESS_CATEGORIES.find()` |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
 | `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Mis comercios + MP Connect + Suscripción + Perfil + Seguridad + Dispositivos FCM |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
