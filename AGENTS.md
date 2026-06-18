@@ -328,6 +328,9 @@ Repo separado, deploy en `admin.pay-alert.com.ar` (Vercel — DNS gestionado por
 - **Estado del sistema** — métricas de `GET /admin/metrics` + integración UptimeRobot (`https://stats.uptimerobot.com/8wBVJ8r93D`)
 - **Bug reports** — kanban OPEN/IN_PROGRESS/CLOSED, cambiar estado dispara email al usuario
 
+**✅ BE listo (sesión 12):** todos los endpoints necesarios implementados en `src/routes/admin/resources.ts`. Autenticación: header `x-admin-api-key`. Paginación offset: `?page=&pageSize=` → `meta: { total, page, pageSize, totalPages }`.
+- `GET /admin/users` · `GET /admin/businesses` · `GET /admin/payments` · `GET /admin/invoices` · `GET /admin/bugs` · `PATCH /admin/bugs/:id`
+
 ### Prioridad 4 — Página "Equipo / About"
 - Sección en landing o `/about` presentando a Guillermo Andrada (https://ga-software.dev) y la oferta de servicios
 - Decidir: sección de scroll en la landing actual o página separada `/about`
