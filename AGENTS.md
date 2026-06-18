@@ -325,10 +325,18 @@ member@test.com / Test1234!  → MEMBER
 - **MP Connect UI** — sección en `/dashboard/settings#mp-connect` con 3 estados: conectado (ID MP + fecha + badge + botón "Desconectar"), desconectado (PasswordInput token + botón "Conectar"), token vencido (banner naranja + form reconexión). Códigos de error mapeados: `INVALID_MP_TOKEN` → mensaje específico, `MP_ACCOUNT_ALREADY_CONNECTED` → `err.message` del BE.
 - **WS `mp.token_invalid`** — `DashboardShell` maneja el mensaje → `setMpTokenInvalid(true)`. `SubscriptionBanner` muestra banner naranja con "Reconectar →" (solo OWNER). `switchBusiness` resetea a `false`.
 
+### ✅ Completado (2026-06-18 — sesión 16) — Exportación multi-formato
+- `ExportDropdown` reemplaza el botón "Exportar CSV" con dropdown: CSV · Excel (XLSX) · PDF empresarial.
+- `src/components/ui/ExportDropdown.tsx` + `src/lib/export-payments.ts`
+- Librerías: `xlsx` (SheetJS) + `jspdf` + `jspdf-autotable`. PDF con importación dinámica.
+- `fetchExportRows()`: fetch al BE + parse CSV + humanización (método de pago, estado, fechas).
+- Exporta exactamente los registros del filtro activo (status, from, to, q).
+- **Gotcha:** `getUser()` de `auth.ts` para nombre del usuario — no `getAccessToken()`.
+
 ### Prioridad 3 — Features Business+
-- Exportación CSV de pagos
-- Alertas por monto mínimo configurables
-- Resumen diario por email
+- ~~Exportación CSV de pagos~~ ✅ (ahora multi-formato)
+- ~~Alertas por monto mínimo configurables~~ ✅
+- ~~Resumen diario por email~~ ✅ (BE hecho, no requiere UI)
 
 ### Prioridad 4 — Panel Admin interno (`pay-alert-admin`)
 Repo separado, deploy en `admin.pay-alert.com.ar` (Vercel — DNS gestionado por Vercel NS, configurar CNAME desde el proyecto en Vercel).
