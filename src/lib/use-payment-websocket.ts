@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { getAccessToken } from './auth'
-import { tryRefresh } from './api'
+import { api } from './api'
 
 // WS URL separada porque las rewrites de Next.js solo proxean HTTP, no WebSocket.
 // En prod: NEXT_PUBLIC_WS_URL = wss://pay-alert-api.onrender.com
@@ -57,16 +56,31 @@ export function usePaymentWebSocket(
     let delay = 1_000
     let active = true
 
-    function connect() {
+    async function connect() {
       if (!active) return
-      const token = getAccessToken()
-      if (!token) return
 
-      ws = new WebSocket(`${WS_BASE}/api/v1/ws`)
+      // Obtener token efímero de un solo uso (30s TTL).
+      // api.post maneja automáticamente el refresh del access token si expiró.
+      let wsToken: string
+      try {
+        const res = await api.post<{ data: { token: string } }>('/api/v1/auth/ws-token')
+        wsToken = res.data.token
+      } catch {
+        // Si el refresh también falló, api.post ya redirigió a /login.
+        // Cualquier otro error: reintentar con backoff.
+        if (!active) return
+        const current = delay
+        delay = Math.min(delay * 2, 30_000)
+        reconnectTimeout = setTimeout(connect, current)
+        return
+      }
+
+      if (!active) return
+
+      ws = new WebSocket(`${WS_BASE}/api/v1/ws?token=${encodeURIComponent(wsToken)}`)
 
       ws.onopen = () => {
         delay = 1_000
-        ws?.send(JSON.stringify({ type: 'auth', token }))
       }
 
       ws.onmessage = (event) => {
@@ -77,13 +91,8 @@ export function usePaymentWebSocket(
         } catch {}
       }
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         if (!active) return
-        // 4001 = token inválido/expirado — refrescar antes de reconectar
-        if (event.code === 4001) {
-          tryRefresh().then(connect)
-          return
-        }
         const current = delay
         delay = Math.min(delay * 2, 30_000)
         reconnectTimeout = setTimeout(connect, current)
