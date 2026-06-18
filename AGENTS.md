@@ -341,9 +341,16 @@ Repo separado, deploy en `admin.pay-alert.com.ar` (Vercel — DNS gestionado por
 **✅ BE listo (sesión 12):** todos los endpoints necesarios implementados en `src/routes/admin/resources.ts`. Autenticación: header `x-admin-api-key`. Paginación offset: `?page=&pageSize=` → `meta: { total, page, pageSize, totalPages }`.
 - `GET /admin/users` · `GET /admin/businesses` · `GET /admin/payments` · `GET /admin/invoices` · `GET /admin/bugs` · `PATCH /admin/bugs/:id`
 
-### Prioridad 4 — Página "Equipo / About"
-- Sección en landing o `/about` presentando a Guillermo Andrada (https://ga-software.dev) y la oferta de servicios
-- Decidir: sección de scroll en la landing actual o página separada `/about`
+### ✅ Completado (2026-06-18 — sesión 15) — Página /developers
+- `src/app/developers/page.tsx` — Server Component público (sin auth)
+- Contenido: flujo 3 pasos, HMAC-SHA256 verification (Node.js + Python + PHP), referencia payload, tabla eventos, ejemplos curl, buenas prácticas, CTA.
+- **Gotcha proxy:** toda ruta nueva pública (sin auth) debe agregarse a `PUBLIC_PATHS` en `src/proxy.ts`. Sin esto el middleware redirige a `/login` para usuarios sin sesión. `/developers` ya está en la lista.
+- Landing: link "Developers" en nav principal + columna "Developers" en footer.
+
+### ✅ Completado (2026-06-17 — sesión 11) — Reporte de bugs / Nosotros
+- `BugReportModal` + botón en Sidebar sobre "Cerrar sesión"
+- Portal a `document.body` para evitar confinamiento por `transform` del sidebar
+- Sección `#nosotros` en landing: Guillermo Andrada, ga-software.dev, servicios a medida
 
 ### ✅ Completado (2026-06-17 — sesión 11) — Reporte de bugs (FE)
 - `BugReportModal` + botón en Sidebar sobre "Cerrar sesión"
