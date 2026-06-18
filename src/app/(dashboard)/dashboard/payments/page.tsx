@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SlideOver } from '@/components/ui/SlideOver'
 import { api } from '@/lib/api'
-import { getAccessToken } from '@/lib/auth'
+import { getUser } from '@/lib/auth'
 import { useActiveBusiness } from '@/lib/business-context'
+import { ExportDropdown } from '@/components/ui/ExportDropdown'
 import type { Payment, ApiResponse } from '@/types'
 
 interface PlanFeatures {
@@ -221,11 +222,11 @@ function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
 // ─── Página principal ────────────────────────────────────────────────────────
 
 export default function PaymentsPage() {
-  const { businessId } = useActiveBusiness()
+  const { businessId, businessName } = useActiveBusiness()
+  const userName = getUser()?.name ?? 'Usuario'
 
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
 
   const [status, setStatus] = useState<StatusFilter>('')
   const [from, setFrom] = useState('')
@@ -326,34 +327,6 @@ export default function PaymentsPage() {
 
   const hasFilters = status !== '' || from !== '' || to !== '' || q !== ''
 
-  async function handleExportCsv() {
-    if (!businessId || isExporting) return
-    setIsExporting(true)
-    try {
-      const params = buildParams()
-      params.delete('cursor')
-      params.delete('limit')
-      const token = getAccessToken()
-      const res = await fetch(`/api/v1/businesses/${businessId}/payments/export?${params}`, {
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (!res.ok) throw new Error('Export failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `pagos-${new Date().toISOString().slice(0, 10)}.csv`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch {
-      // silencio — el error se refleja en el estado de carga
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   return (
     <PageShell title="Pagos">
@@ -364,26 +337,13 @@ export default function PaymentsPage() {
           <h2 className="text-xl font-semibold text-foreground">Historial de pagos</h2>
           <p className="mt-0.5 text-sm text-muted">Todos los pagos recibidos en tu negocio</p>
         </div>
-        {planFeatures?.dataExport && (
-          <button
-            onClick={handleExportCsv}
-            disabled={isExporting}
-            className="flex shrink-0 items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-50"
-          >
-            {isExporting ? (
-              <>
-                <Spinner size="sm" />
-                Exportando...
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Exportar CSV
-              </>
-            )}
-          </button>
+        {planFeatures?.dataExport && businessId && (
+          <ExportDropdown
+            businessId={businessId}
+            businessName={businessName ?? 'Mi Comercio'}
+            userName={userName}
+            buildParams={buildParams}
+          />
         )}
       </div>
 
