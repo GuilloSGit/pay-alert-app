@@ -13,6 +13,10 @@ interface AlertasSubscription {
   plan: { alertByAmount: boolean }
 }
 
+interface UserProfile {
+  pushEnabled: boolean
+}
+
 export function AlertasSection() {
   const { businessId, role } = useActiveBusiness()
   const queryClient = useQueryClient()
@@ -37,6 +41,15 @@ export function AlertasSection() {
     enabled: !!businessId && !!subscription?.plan.alertByAmount,
   })
 
+  const { data: user, isLoading: isLoadingUser } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () =>
+      api
+        .get<ApiResponse<UserProfile>>('/api/v1/users/me')
+        .then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+
   const [minAmount, setMinAmount] = useState<string>('')
   const [initialized, setInitialized] = useState(false)
   const [isPending, setIsPending] = useState(false)
@@ -49,7 +62,7 @@ export function AlertasSection() {
   }
 
   const hasAlertByAmount = !!subscription?.plan.alertByAmount
-  const isLoading = isLoadingSub || (hasAlertByAmount && isLoadingRule)
+  const isLoading = isLoadingSub || (hasAlertByAmount && isLoadingRule) || isLoadingUser
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -73,6 +86,18 @@ export function AlertasSection() {
     }
   }
 
+  async function handlePushToggle(enabled: boolean) {
+    setError(null)
+    setSuccess(false)
+    try {
+      await api.put('/api/v1/users/me', { pushEnabled: enabled })
+      void queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      setSuccess(true)
+    } catch {
+      setError('No se pudo actualizar la configuración. Intentá de nuevo.')
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -85,63 +110,90 @@ export function AlertasSection() {
           <Spinner size="sm" />
           <span className="text-sm text-muted">Cargando...</span>
         </div>
-      ) : !hasAlertByAmount ? (
-        <div className="rounded-lg border border-dashed border-border p-4 text-center">
-          <p className="text-sm font-medium text-foreground">Disponible en el plan Business</p>
-          <p className="mt-1 text-sm text-muted">
-            Filtrá notificaciones por monto mínimo y recibí alertas solo de los pagos que importan.
-          </p>
-        </div>
       ) : (
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="min-amount" className="text-sm font-medium text-foreground">
-              Monto mínimo para notificar (ARS)
-            </label>
-            <p className="text-xs text-muted">
-              Solo recibirás notificaciones de pagos iguales o mayores a este monto. Dejarlo vacío notifica todos los pagos.
-            </p>
-            <input
-              id="min-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={minAmount}
-              onChange={(e) => { setMinAmount(e.target.value); setSuccess(false) }}
-              placeholder="Ej: 1000"
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-foreground">Notificaciones push</label>
+              <p className="text-xs text-muted">
+                Recibí alertas en tu dispositivo cuando lleguen nuevos pagos.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handlePushToggle(!user?.pushEnabled)}
               disabled={!canEdit}
-              className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
-            />
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                user?.pushEnabled ? 'bg-primary' : 'bg-muted'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  user?.pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
 
-          {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
-          )}
-          {success && (
-            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              Configuración guardada correctamente.
-            </p>
-          )}
+          {hasAlertByAmount ? (
+            <form onSubmit={handleSave} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="min-amount" className="text-sm font-medium text-foreground">
+                  Monto mínimo para notificar (ARS)
+                </label>
+                <p className="text-xs text-muted">
+                  Solo recibirás notificaciones de pagos iguales o mayores a este monto. Dejarlo vacío notifica todos los pagos.
+                </p>
+                <input
+                  id="min-amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={minAmount}
+                  onChange={(e) => { setMinAmount(e.target.value); setSuccess(false) }}
+                  placeholder="Ej: 1000"
+                  disabled={!canEdit}
+                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
 
-          {canEdit && (
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {isPending ? (
-                  <span className="flex items-center gap-2">
-                    <Spinner size="sm" className="border-white" />
-                    Guardando...
-                  </span>
-                ) : (
-                  'Guardar'
-                )}
-              </button>
+              {error && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+              )}
+              {success && (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  Configuración guardada correctamente.
+                </p>
+              )}
+
+              {canEdit && (
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isPending ? (
+                      <span className="flex items-center gap-2">
+                        <Spinner size="sm" className="border-white" />
+                        Guardando...
+                      </span>
+                    ) : (
+                      'Guardar'
+                    )}
+                  </button>
+                </div>
+              )}
+            </form>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border p-4 text-center">
+              <p className="text-sm font-medium text-foreground">Disponible en el plan Business</p>
+              <p className="mt-1 text-sm text-muted">
+                Filtrá notificaciones por monto mínimo y recibí alertas solo de los pagos que importan.
+              </p>
             </div>
           )}
-        </form>
+        </div>
       )}
     </Card>
   )
