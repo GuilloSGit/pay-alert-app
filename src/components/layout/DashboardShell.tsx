@@ -9,6 +9,7 @@ import { SubscriptionBanner } from '@/components/ui/SubscriptionBanner'
 import { SubscriptionGate } from '@/components/ui/SubscriptionGate'
 import { api } from '@/lib/api'
 import { registerDevice } from '@/lib/device'
+import { registerPushIfPermitted } from '@/lib/push'
 import { BusinessContext } from '@/lib/business-context'
 import type { BusinessBrief, SubscriptionStatus } from '@/lib/business-context'
 import { usePaymentWebSocket } from '@/lib/use-payment-websocket'
@@ -154,6 +155,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         setDeviceLimitModal({ currentDevice: result.currentDevice })
       }
     })
+    void registerPushIfPermitted()
   }, [])
 
   async function handleConfirmReplace() {
