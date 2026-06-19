@@ -107,15 +107,26 @@ Next.js app directory los registra automáticamente en los `<link>` del `<head>`
 No agregar entradas manuales en `src/app/layout.tsx` — se duplicarían.
 
 ### PWA manifest y el install prompt de Chrome
-`src/app/manifest.ts` debe incluir al menos un ícono con `purpose: 'any'`.
-Chrome no muestra el botón de instalación si solo existe `purpose: 'maskable'`.
+`src/app/manifest.ts` usa íconos PNG estáticos en `public/icons/`:
+- `icon-192x192.png` — notificaciones push + Chrome install prompt
+- `icon-512x512.png` — splash screens + maskable
+- `badge-72x72.png` — barra de estado Android (referenciado en `firebase-messaging-sw.js`)
 
-```ts
-icons: [
-  { src: '/icon', sizes: '192x192', type: 'image/png', purpose: 'any' },      // ← requerido
-  { src: '/icon', sizes: '512x512', type: 'image/png', purpose: 'maskable' }, // ← splash screens
-],
-```
+Chrome no muestra el botón de instalación si solo existe `purpose: 'maskable'`.
+Siempre incluir un ícono con `purpose: 'any'`.
+
+Los íconos se generaron con Python Pillow (campana blanca, círculo verde #059669, fondo #040c07).
+Si se quieren regenerar: ver script en la sesión 30 del historial.
+
+### favicon e íconos dinámicos (Next.js)
+`src/app/icon.tsx` y `src/app/apple-icon.tsx` generan el favicon del browser dinámicamente.
+**viewBox crítico:** usar `"9 5 14 19"` (bounds reales de la campana SVG), NO `"0 0 32 32"`.
+Con el viewBox amplio la campana queda chiquitita en la pestaña del browser.
+
+### Service Worker FCM — `public/firebase-messaging-sw.js`
+- `onBackgroundMessage`: siempre adjuntar `data: payload.data` y `tag: data.paymentId` a `showNotification`
+- Siempre tener un `notificationclick` handler que abra `/dashboard/payments`
+- Sin estos, el click en la notificación nativa no hace nada
 
 ### proxy.ts matcher — qué excluir
 El matcher de `src/proxy.ts` debe excluir todos los endpoints que generan assets:
