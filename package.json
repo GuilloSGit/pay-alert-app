@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
+    "firebase": "^12.15.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "next": "16.2.6",

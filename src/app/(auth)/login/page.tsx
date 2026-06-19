@@ -9,6 +9,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { api, ApiError } from '@/lib/api'
 import { saveSession } from '@/lib/auth'
+import { registerPushIfPermitted } from '@/lib/push'
 import type { ApiResponse, User } from '@/types'
 
 export default function LoginPage() {
@@ -32,6 +33,7 @@ export default function LoginPage() {
         { skipAuth: true },
       )
       saveSession(res.data.accessToken, res.data.user)
+      void registerPushIfPermitted()
       router.push('/dashboard')
     } catch (err) {
       if (err instanceof ApiError) {

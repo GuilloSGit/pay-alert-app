@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api } from '@/lib/api'
-import { type Device, PLATFORM_LABELS, formatRelative } from './types'
+import { registerPushIfPermitted } from '@/lib/push'
+import { type Device, PLATFORM_LABELS, formatRelative, formatDate } from './types'
 
 function PlatformIcon({ platform }: { platform: Device['platform'] }) {
   if (platform === 'android') {
@@ -35,6 +36,22 @@ export function DevicesSection() {
   const [revokeTarget, setRevokeTarget] = useState<Device | null>(null)
   const [isRevoking, setIsRevoking] = useState(false)
   const [revokeError, setRevokeError] = useState<string | null>(null)
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | null>(null)
+  const [isActivatingPush, setIsActivatingPush] = useState(false)
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setPushPermission(Notification.permission)
+    }
+  }, [])
+
+  async function handleActivatePush() {
+    setIsActivatingPush(true)
+    await registerPushIfPermitted()
+    if ('Notification' in window) setPushPermission(Notification.permission)
+    void queryClient.invalidateQueries({ queryKey: ['devices'] })
+    setIsActivatingPush(false)
+  }
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ['devices'],
@@ -64,6 +81,25 @@ export function DevicesSection() {
         <CardDescription>Dispositivos que reciben notificaciones push de pagos.</CardDescription>
       </CardHeader>
 
+      {pushPermission !== null && pushPermission !== 'granted' && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <p className="text-sm text-blue-700">
+            {pushPermission === 'denied'
+              ? 'Las notificaciones push están bloqueadas en este navegador.'
+              : 'Activá las notificaciones push para recibir alertas de pago en este dispositivo.'}
+          </p>
+          {pushPermission !== 'denied' && (
+            <button
+              onClick={handleActivatePush}
+              disabled={isActivatingPush}
+              className="ml-4 flex-shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+            >
+              {isActivatingPush ? 'Activando...' : 'Activar'}
+            </button>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center gap-2 py-2">
           <Spinner size="sm" />
@@ -85,6 +121,9 @@ export function DevicesSection() {
                   </p>
                   <p className="text-xs text-muted">
                     {PLATFORM_LABELS[d.platform]} &middot; Última actividad: {formatRelative(d.lastSeenAt)}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Registrado: {formatDate(d.createdAt)}
                   </p>
                 </div>
               </div>
