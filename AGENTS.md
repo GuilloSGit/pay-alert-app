@@ -251,6 +251,14 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 - **Sonido:** AudioContext singleton en `PaymentToast.tsx`. Se crea una sola vez y se desbloquea en el primer gesto del usuario (`click`/`keydown`/`touchstart`). Registrado en `PaymentToastContainer` via `useEffect`. No crear `new AudioContext()` en cada llamada — el browser lo bloquea por autoplay policy.
 - WS URL: `NEXT_PUBLIC_WS_URL` (ver env vars) — **no** usar `NEXT_PUBLIC_API_URL` para WS en local
 - Endpoint de prueba local: `POST /dev/test-notify` (requiere Bearer JWT)
+
+### Push notifications — flujo de permiso
+
+`registerPushIfPermitted()` en `src/lib/push.ts` pide permiso al browser, registra el SW de FCM y hace POST a `/users/me/devices`.
+
+**Regla:** nunca llamar `registerPushIfPermitted()` automáticamente (ej: al login). El permiso solo se pide cuando el usuario hace click explícito en "Activar" (botón en `DevicesSection`). Llamarla sin gesto de usuario falla silenciosamente en mobile y es percibido como intrusivo.
+
+`DevicesSection` lee `Notification.permission` con `useState` lazy (no `useEffect`) y muestra un banner si `!== 'granted'`.
 - **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries.
 
 ### Jerarquía de roles
