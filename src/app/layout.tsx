@@ -17,13 +17,19 @@ export const metadata: Metadata = {
     siteName: 'Pay Alert',
     locale: 'es_AR',
     type: 'website',
-    // og:image generado dinámicamente por opengraph-image.tsx (raíz)
-    // y usado como fallback para rutas sin imagen propia
     images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Pay Alert — Confirmación de pago instantánea' }],
   },
   twitter: {
     card: 'summary_large_image',
     images: ['/opengraph-image'],
+  },
+  // PWA
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Pay Alert',
+    statusBarStyle: 'black-translucent',
+    startupImage: '/icons/icon-512x512.png',
   },
   // icon.tsx y apple-icon.tsx en el app directory generan los link tags automáticamente
 }

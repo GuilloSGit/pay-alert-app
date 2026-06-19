@@ -18,7 +18,7 @@ export default function AppleIcon() {
           justifyContent: 'center',
         }}
       >
-        <svg width="110" height="110" viewBox="0 0 32 32" fill="none">
+        <svg width="135" height="135" viewBox="9 5 14 19" fill="none">
           <path
             d="M16 6a2 2 0 0 0-2 2v.87A6 6 0 0 0 10 15v4l-1.5 1.5V21h15v-.5L22 19v-4a6 6 0 0 0-4-5.87V8a2 2 0 0 0-2-2z"
             fill="white"

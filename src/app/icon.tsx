@@ -18,7 +18,8 @@ export default function Icon() {
           justifyContent: 'center',
         }}
       >
-        <svg width="310" height="310" viewBox="0 0 32 32" fill="none">
+        {/* viewBox recortado a los bounds reales de la campana (x:9-23, y:5-24) */}
+        <svg width="390" height="390" viewBox="9 5 14 19" fill="none">
           <path
             d="M16 6a2 2 0 0 0-2 2v.87A6 6 0 0 0 10 15v4l-1.5 1.5V21h15v-.5L22 19v-4a6 6 0 0 0-4-5.87V8a2 2 0 0 0-2-2z"
             fill="white"
