@@ -19,29 +19,30 @@ import {
 interface Plan {
   slug: string
   name: string
-  priceARS: string
+  priceARS: string | null
+  isPublic: boolean
   dailySummary: boolean
   alertByAmount: boolean
   dataExport: boolean
   closures: boolean
   outboundWebhooks: boolean
   maxMembers: number
+  maxBusinesses: number
 }
 
 const PLAN_FEATURES: Record<string, string[]> = {
   basic: [
     'Notificaciones en tiempo real',
     'Historial 30 días',
-    'Hasta 3 miembros',
+    '1 comercio · hasta 3 miembros',
   ],
-  business: [
+  professional: [
     'Notificaciones en tiempo real',
-    'Historial completo',
-    'Hasta 10 miembros',
+    'Historial 1 año completo',
+    '2 comercios · hasta 6 miembros',
     'Alertas por monto mínimo',
-    'Exportación CSV/Excel/PDF',
+    'Exportación CSV',
     'Cierres diarios por email',
-    'Webhooks salientes',
   ],
 }
 
@@ -78,7 +79,7 @@ function PlanPicker({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        {plans.map((plan) => {
+        {plans.filter((p) => p.isPublic).map((plan) => {
           const isSelected = selected === plan.slug
           const features = PLAN_FEATURES[plan.slug] ?? []
           return (
@@ -95,7 +96,7 @@ function PlanPicker({
                 <div>
                   <p className="text-sm font-semibold text-foreground">{plan.name}</p>
                   <p className="text-xs text-muted">
-                    ${Number(plan.priceARS).toLocaleString('es-AR')} / mes
+                    {plan.priceARS !== null ? `$${Number(plan.priceARS).toLocaleString('es-AR')} / mes` : 'A medida'}
                   </p>
                 </div>
                 <div
@@ -232,7 +233,9 @@ export function SubscriptionSection() {
                 <p className="text-sm font-medium text-foreground">{subscription.plan.name}</p>
                 <p className="text-xs text-muted">
                   {subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
-                    ? `$${Number(subscription.plan.priceARS).toLocaleString('es-AR')} / mes`
+                    ? subscription.plan.priceARS !== null
+                      ? `$${Number(subscription.plan.priceARS).toLocaleString('es-AR')} / mes`
+                      : 'Plan a medida'
                     : subscription.status === 'TRIALING'
                     ? `${subscription.plan.trialDays} días de prueba gratuita`
                     : '—'}

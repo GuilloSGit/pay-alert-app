@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, Suspense, type FormEvent } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -12,8 +12,13 @@ import { saveSession } from '@/lib/auth'
 import { registerPushIfPermitted } from '@/lib/push'
 import type { ApiResponse, User } from '@/types'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const params = useSearchParams()
+  const rawRedirect = params.get('redirect')
+  // Solo permitir rutas internas para evitar open redirect
+  const redirect = rawRedirect?.startsWith('/') ? rawRedirect : null
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,7 +39,7 @@ export default function LoginPage() {
       )
       saveSession(res.data.accessToken, res.data.user)
       void registerPushIfPermitted()
-      router.push('/dashboard')
+      router.push(redirect ?? '/dashboard')
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.status === 401 ? 'Email o contraseña incorrectos.' : err.message)
@@ -93,5 +98,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </Card>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<Card><div className="py-8 text-center text-sm text-muted">Cargando...</div></Card>}>
+      <LoginForm />
+    </Suspense>
   )
 }

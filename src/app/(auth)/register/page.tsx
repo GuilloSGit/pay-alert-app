@@ -1,16 +1,20 @@
 'use client'
 
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, Suspense, type FormEvent } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { api, ApiError } from '@/lib/api'
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const params = useSearchParams()
+  const plan = params.get('plan')
+  const loginRedirect = plan ? `/onboarding?plan=${plan}` : null
+
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [countdown, setCountdown] = useState(3)
@@ -18,10 +22,13 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!success) return
+    const dest = loginRedirect
+      ? `/login?redirect=${encodeURIComponent(loginRedirect)}`
+      : '/login'
     const interval = setInterval(() => setCountdown((n) => n - 1), 1000)
-    const timeout = setTimeout(() => router.push('/login'), 3000)
+    const timeout = setTimeout(() => router.push(dest), 3000)
     return () => { clearInterval(interval); clearTimeout(timeout) }
-  }, [success, router])
+  }, [success, router, loginRedirect])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -121,5 +128,13 @@ export default function RegisterPage() {
         </Link>
       </p>
     </Card>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<Card><div className="py-8 text-center text-sm text-muted">Cargando...</div></Card>}>
+      <RegisterForm />
+    </Suspense>
   )
 }

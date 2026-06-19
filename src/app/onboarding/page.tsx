@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
@@ -25,33 +25,35 @@ const BUSINESS_CATEGORIES = [
 interface Plan {
   slug: string
   name: string
-  priceARS: string
+  priceARS: string | null
+  isPublic: boolean
   dailySummary: boolean
   alertByAmount: boolean
   dataExport: boolean
   closures: boolean
   outboundWebhooks: boolean
   maxMembers: number
+  maxBusinesses: number
 }
 
 const PLAN_FEATURES: Record<string, string[]> = {
   basic: [
     'Notificaciones en tiempo real',
     'Historial de pagos 30 días',
-    'Hasta 3 miembros del equipo',
+    '1 comercio · hasta 3 miembros',
   ],
-  business: [
+  professional: [
     'Notificaciones en tiempo real',
-    'Historial completo sin límite',
-    'Hasta 10 miembros del equipo',
+    'Historial 1 año completo',
+    '2 comercios · hasta 6 miembros',
     'Alertas por monto mínimo',
     'Exportación CSV',
     'Cierres diarios por email',
-    'Webhooks salientes',
   ],
 }
 
-function fmtARS(amount: string) {
+function fmtARS(amount: string | null) {
+  if (amount === null) return 'A medida'
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(Number(amount))
 }
 
@@ -301,13 +303,15 @@ function Step2({
 function Step3({
   businessId,
   onDone,
+  initialPlan,
 }: {
   businessId: string
   onDone: () => void
+  initialPlan?: string
 }) {
   const [plans, setPlans] = useState<Plan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
-  const [selected, setSelected] = useState('basic')
+  const [selected, setSelected] = useState(initialPlan ?? 'basic')
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -316,11 +320,12 @@ function Step3({
       .get<{ data: Plan[] }>('/api/v1/plans')
       .then((r) => {
         setPlans(r.data)
-        if (r.data.some((p) => p.slug === 'business')) setSelected('business')
+        // Solo auto-seleccionar 'professional' si no llegó un plan pre-elegido
+        if (!initialPlan && r.data.some((p) => p.slug === 'professional')) setSelected('professional')
       })
       .catch(() => {})
       .finally(() => setPlansLoading(false))
-  }, [])
+  }, [initialPlan])
 
   async function handleCheckout() {
     setError(null)
@@ -358,7 +363,7 @@ function Step3({
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {plans.map((plan) => {
+          {plans.filter((p) => p.isPublic).map((plan) => {
             const isSelected = selected === plan.slug
             const features = PLAN_FEATURES[plan.slug] ?? []
             return (
@@ -372,7 +377,7 @@ function Step3({
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                {plan.slug === 'business' && (
+                {plan.slug === 'professional' && (
                   <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
                     Recomendado
                   </span>
@@ -382,7 +387,7 @@ function Step3({
                     <p className="font-semibold text-gray-900">{plan.name}</p>
                     <p className="mt-0.5 text-lg font-bold text-gray-900">
                       {fmtARS(plan.priceARS)}
-                      <span className="ml-1 text-sm font-normal text-gray-500">/mes</span>
+                      {plan.priceARS !== null && <span className="ml-1 text-sm font-normal text-gray-500">/mes</span>}
                     </p>
                   </div>
                   <div
@@ -433,8 +438,10 @@ function Step3({
 
 // ─── Página raíz ─────────────────────────────────────────────────────────────
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter()
+  const params = useSearchParams()
+  const initialPlan = params.get('plan') ?? undefined
   const [step, setStep] = useState<1 | 2 | 3 | null>(null) // null = cargando
   const [businessId, setBusinessId] = useState<string | null>(null)
 
@@ -531,6 +538,7 @@ export default function OnboardingPage() {
                 <Step3
                   businessId={businessId}
                   onDone={handleDone}
+                  initialPlan={initialPlan}
                 />
               )}
             </div>
@@ -556,5 +564,13 @@ export default function OnboardingPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <OnboardingContent />
+    </Suspense>
   )
 }
