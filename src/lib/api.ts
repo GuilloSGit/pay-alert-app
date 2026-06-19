@@ -63,7 +63,9 @@ async function request<T>(path: string, options: FetchOptions = {}, isRetry = fa
     throw new ApiError(401, 'UNAUTHORIZED', 'Sesión expirada')
   }
 
-  if (res.status === 401) {
+  // isRetry=true: el refresh funcionó pero el retry también da 401 → cerrar sesión.
+  // skipAuth=true (ej: login): no redirigir — el caller maneja el error.
+  if (res.status === 401 && !skipAuth) {
     clearSession()
     if (typeof window !== 'undefined') window.location.href = '/login'
     throw new ApiError(401, 'UNAUTHORIZED', 'Sesión expirada')
