@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
@@ -36,14 +36,13 @@ export function DevicesSection() {
   const [revokeTarget, setRevokeTarget] = useState<Device | null>(null)
   const [isRevoking, setIsRevoking] = useState(false)
   const [revokeError, setRevokeError] = useState<string | null>(null)
-  const [pushPermission, setPushPermission] = useState<NotificationPermission | null>(null)
-  const [isActivatingPush, setIsActivatingPush] = useState(false)
-
-  useEffect(() => {
-    if ('Notification' in window) {
-      setPushPermission(Notification.permission)
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | null>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission
     }
-  }, [])
+    return null
+  })
+  const [isActivatingPush, setIsActivatingPush] = useState(false)
 
   async function handleActivatePush() {
     setIsActivatingPush(true)
