@@ -9,6 +9,7 @@ import { CierresEmailSection } from './_sections/CierresEmailSection'
 import { ProfileSection } from './_sections/ProfileSection'
 import { SecuritySection } from './_sections/SecuritySection'
 import { DevicesSection } from './_sections/DevicesSection'
+import { QuietHoursSection } from './_sections/QuietHoursSection'
 
 export default function SettingsPage() {
   return (
@@ -22,6 +23,7 @@ export default function SettingsPage() {
         <ProfileSection />
         <SecuritySection />
         <DevicesSection />
+        <QuietHoursSection />
       </div>
     </PageShell>
   )
