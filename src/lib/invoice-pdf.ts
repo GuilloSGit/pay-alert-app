@@ -36,9 +36,38 @@ export async function generateInvoicePdf(invoice: InvoiceData): Promise<void> {
 
   doc.setFillColor(5, 150, 105) // #059669
   doc.roundedRect(margin, 10, 18, 18, 3, 3, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(14)
-  doc.text('🔔', margin + 9, 21, { align: 'center' })
+
+  // ── Campana con primitivas jsPDF ──────────────────────────────────────────
+  // Centro del rectángulo verde: cx=margin+9, cy=19
+  // Eje: handle (y=11.5→13.5), cuerpo (y=13.5→20.5), badajo (y=22 r=1)
+  const bx = margin + 9  // 29mm
+  const by = 19          // centro vertical
+  doc.setFillColor(255, 255, 255)
+  doc.setDrawColor(255, 255, 255)
+
+  // Gancho superior — rectángulo redondeado pequeño
+  doc.roundedRect(bx - 1, by - 7.5, 2, 2, 0.5, 0.5, 'F')
+
+  // Cuerpo de la campana — path con 2 bezier + 3 líneas
+  // S=(bx, by-5.5) → P1=(bx-4,by+1) → P2=(bx-5,by+1.5) → P3=(bx+5,by+1.5) → P4=(bx+4,by+1) → S
+  // Coordenadas relativas al punto anterior (API doc.lines)
+  doc.lines(
+    [
+      [-1, 2, -4, 4.5, -4, 6.5],   // S→P1: bezier lado izquierdo
+      [-1, 0.5],                     // P1→P2: vuelo izquierdo
+      [10, 0],                       // P2→P3: ala plana inferior
+      [-1, -0.5],                    // P3→P4: vuelo derecho
+      [0, -2, -3, -6.5, -4, -6.5],  // P4→S: bezier lado derecho
+    ],
+    bx,
+    by - 5.5,
+    [1, 1],
+    'F',
+  )
+
+  // Badajo — círculo bajo el ala
+  doc.circle(bx, by + 3, 1, 'F')
+  // ──────────────────────────────────────────────────────────────────────────
 
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
