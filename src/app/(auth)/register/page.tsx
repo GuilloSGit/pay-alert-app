@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -9,9 +10,18 @@ import { Button } from '@/components/ui/Button'
 import { api, ApiError } from '@/lib/api'
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [countdown, setCountdown] = useState(3)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!success) return
+    const interval = setInterval(() => setCountdown((n) => n - 1), 1000)
+    const timeout = setTimeout(() => router.push('/login'), 3000)
+    return () => { clearInterval(interval); clearTimeout(timeout) }
+  }, [success, router])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -48,13 +58,13 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-xl font-semibold text-foreground">¡Registro exitoso!</h2>
           <p className="text-sm text-muted">
-            Tu cuenta fue creada. Podés iniciar sesión ahora.
+            Tu cuenta fue creada. Te redirigimos al login en {countdown}s…
           </p>
           <Link
             href="/login"
             className="mt-2 text-sm font-medium text-primary hover:underline"
           >
-            Ir al login
+            Ir al login ahora
           </Link>
         </div>
       </Card>

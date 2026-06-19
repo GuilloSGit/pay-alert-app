@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { ApiResponse } from '@/types'
@@ -154,10 +155,14 @@ function PlanPicker({
 
 export function SubscriptionSection() {
   const { businessId, role } = useActiveBusiness()
+  const queryClient = useQueryClient()
   const isOwner = role === 'OWNER'
   const [isStartingCheckout, setIsStartingCheckout] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [showPlanPicker, setShowPlanPicker] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   const { data: subscription, isLoading } = useQuery({
     queryKey: ['subscription', businessId],
@@ -182,6 +187,21 @@ export function SubscriptionSection() {
       const msg = err instanceof ApiError ? err.message : 'Error al iniciar el proceso de pago.'
       setCheckoutError(msg)
       setIsStartingCheckout(false)
+    }
+  }
+
+  async function handleCancelSubscription() {
+    if (!businessId) return
+    setIsCancelling(true)
+    setCancelError(null)
+    try {
+      await api.delete(`/api/v1/businesses/${businessId}/subscription`)
+      void queryClient.invalidateQueries({ queryKey: ['subscription', businessId] })
+      setShowCancelConfirm(false)
+    } catch (err) {
+      setCancelError(err instanceof ApiError ? err.message : 'No se pudo cancelar. Intentá de nuevo.')
+    } finally {
+      setIsCancelling(false)
     }
   }
 
@@ -289,17 +309,46 @@ export function SubscriptionSection() {
             {/* Cancelar — solo en ACTIVE */}
             {isOwner && subscription.status === 'ACTIVE' && (
               <div className="flex justify-end">
-                <a
-                  href="/dashboard/settings#cancelar"
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
                   className="text-xs text-muted underline underline-offset-2 hover:text-red-600"
                 >
                   Cancelar suscripción
-                </a>
+                </button>
               </div>
             )}
           </div>
         )}
       </Card>
+
+      {showCancelConfirm && subscription && (
+        <ConfirmDialog
+          title="Cancelar suscripción"
+          description={
+            <>
+              ¿Confirmás la cancelación del Plan{' '}
+              <strong className="text-foreground">{subscription.plan.name}</strong>?
+              Perderás el acceso al finalizar el período actual. Tus datos e historial se conservan y podés reactivar cuando quieras.
+            </>
+          }
+          icon={
+            <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+          confirmLabel="Sí, cancelar"
+          pendingLabel="Cancelando..."
+          onConfirm={handleCancelSubscription}
+          onCancel={() => { setShowCancelConfirm(false); setCancelError(null) }}
+          isPending={isCancelling}
+        >
+          {cancelError && (
+            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {cancelError}
+            </p>
+          )}
+        </ConfirmDialog>
+      )}
     </div>
   )
 }

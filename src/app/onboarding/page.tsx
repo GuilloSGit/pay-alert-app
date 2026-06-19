@@ -493,8 +493,19 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       {/* Header */}
-      <header className="flex items-center justify-center border-b border-gray-200 bg-white py-4">
+      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
         <span className="text-lg font-bold tracking-tight text-gray-900">Pay Alert</span>
+        {step !== null && step > 1 && (
+          <button
+            onClick={() => {
+              localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+              router.replace('/dashboard')
+            }}
+            className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Ir al dashboard →
+          </button>
+        )}
       </header>
 
       {/* Main */}
@@ -526,6 +537,20 @@ export default function OnboardingPage() {
 
             <p className="mt-6 text-center text-xs text-gray-400">
               Paso {step} de {STEPS.length}
+              {step > 1 && (
+                <>
+                  {' · '}
+                  <button
+                    onClick={() => {
+                      localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+                      router.replace('/dashboard')
+                    }}
+                    className="underline hover:text-gray-600"
+                  >
+                    saltar configuración
+                  </button>
+                </>
+              )}
             </p>
           </>
         )}
