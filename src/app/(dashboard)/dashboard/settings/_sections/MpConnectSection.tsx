@@ -1,30 +1,58 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { SlideOver } from '@/components/ui/SlideOver'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { ApiResponse } from '@/types'
 import { type MpConnection, formatDate } from './types'
 
+const MP_ERROR_MESSAGES: Record<string, string> = {
+  cancelled: 'Cancelaste la autorización en Mercado Pago.',
+  already_connected: 'Esta cuenta de Mercado Pago ya está conectada a otro comercio.',
+  token_exchange_failed: 'Hubo un error al obtener los tokens de Mercado Pago. Intentá de nuevo.',
+  invalid_state: 'El enlace de autorización expiró. Intentá de nuevo.',
+  not_configured: 'OAuth de MP no configurado. Contactá a soporte.',
+}
+
 export function MpConnectSection() {
   const { businessId, role } = useActiveBusiness()
   const queryClient = useQueryClient()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const isOwner = role === 'OWNER'
 
-  const [token, setToken] = useState('')
   const [isPending, setIsPending] = useState(false)
-  const [connectError, setConnectError] = useState<string | null>(null)
-  const [connectSuccess, setConnectSuccess] = useState(false)
+  const [oauthError, setOauthError] = useState<string | null>(null)
+  const [oauthSuccess, setOauthSuccess] = useState(false)
   const [showDisconnect, setShowDisconnect] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [disconnectError, setDisconnectError] = useState<string | null>(null)
-  const [showMpGuide, setShowMpGuide] = useState(false)
+
+  // Leer resultado del callback OAuth de la URL
+  useEffect(() => {
+    const mp = searchParams.get('mp')
+    const mpError = searchParams.get('mp_error')
+    if (!mp) return
+
+    if (mp === 'connected') {
+      setOauthSuccess(true)
+      void queryClient.invalidateQueries({ queryKey: ['mp-connect', businessId] })
+    } else if (mp === 'error') {
+      setOauthError(MP_ERROR_MESSAGES[mpError ?? ''] ?? 'Error al conectar con Mercado Pago.')
+    }
+
+    // Limpiar params de la URL sin recargar
+    const url = new URL(window.location.href)
+    url.searchParams.delete('mp')
+    url.searchParams.delete('mp_error')
+    url.searchParams.delete('businessId')
+    router.replace(url.pathname + (url.search || ''), { scroll: false })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: connection, isLoading } = useQuery({
     queryKey: ['mp-connect', businessId],
@@ -35,26 +63,18 @@ export function MpConnectSection() {
     enabled: !!businessId,
   })
 
-  async function handleConnect(e: React.FormEvent) {
-    e.preventDefault()
-    if (!token.trim()) return
-    setConnectError(null)
-    setConnectSuccess(false)
+  async function handleOAuth() {
+    if (!businessId) return
     setIsPending(true)
+    setOauthError(null)
+    setOauthSuccess(false)
     try {
-      await api.post(`/api/v1/businesses/${businessId}/mp-connect`, { accessToken: token.trim() })
-      setToken('')
-      setConnectSuccess(true)
-      void queryClient.invalidateQueries({ queryKey: ['mp-connect', businessId] })
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'INVALID_MP_TOKEN') {
-        setConnectError('El token es inválido o no tiene los permisos necesarios. Verificá que sea el Access Token de producción.')
-      } else if (err instanceof ApiError && err.code === 'MP_ACCOUNT_ALREADY_CONNECTED') {
-        setConnectError(err.message)
-      } else {
-        setConnectError('No se pudo conectar la cuenta. Intentá de nuevo.')
-      }
-    } finally {
+      const res = await api.get<ApiResponse<{ url: string }>>(
+        `/api/v1/businesses/${businessId}/mp-connect/oauth?returnTo=/dashboard/settings`,
+      )
+      window.location.href = res.data.url
+    } catch {
+      setOauthError('No se pudo iniciar la conexión. Intentá de nuevo.')
       setIsPending(false)
     }
   }
@@ -81,7 +101,9 @@ export function MpConnectSection() {
       <Card>
         <CardHeader>
           <CardTitle>Conexión con Mercado Pago</CardTitle>
-          <CardDescription>Token de acceso para recibir notificaciones de pagos en tiempo real.</CardDescription>
+          <CardDescription>
+            Autorizá a Pay Alert para recibir notificaciones de tus pagos en tiempo real.
+          </CardDescription>
         </CardHeader>
 
         {isLoading ? (
@@ -101,6 +123,11 @@ export function MpConnectSection() {
                 Activo
               </span>
             </div>
+            {oauthSuccess && (
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                Cuenta de Mercado Pago conectada correctamente.
+              </p>
+            )}
             {isOwner && (
               <div className="flex justify-end">
                 <button
@@ -116,56 +143,48 @@ export function MpConnectSection() {
           <div className="flex flex-col gap-4">
             {isTokenExpired && (
               <p className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-                El token venció o fue revocado. Ingresá uno nuevo para restablecer la conexión.
+                La conexión con Mercado Pago se interrumpió. Volvé a autorizar para restablecer las notificaciones.
+              </p>
+            )}
+
+            {oauthSuccess && (
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                Cuenta de Mercado Pago conectada correctamente.
+              </p>
+            )}
+
+            {oauthError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {oauthError}
               </p>
             )}
 
             {isOwner ? (
-              <form onSubmit={handleConnect} className="flex flex-col gap-4">
-                <PasswordInput
-                  id="mp-access-token"
-                  label="Access Token de Mercado Pago"
-                  value={token}
-                  onChange={(e) => { setToken(e.target.value); setConnectError(null); setConnectSuccess(false) }}
-                  placeholder="APP_USR-..."
-                  required
-                />
+              <div className="flex flex-col gap-3">
                 <button
-                  type="button"
-                  onClick={() => setShowMpGuide(true)}
-                  className="self-start text-xs text-primary underline underline-offset-2 transition-opacity hover:opacity-75"
+                  onClick={handleOAuth}
+                  disabled={isPending}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-[#009EE3] bg-[#009EE3] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
-                  ¿Cómo obtengo el token?
+                  {isPending ? (
+                    <>
+                      <Spinner size="sm" className="border-white" />
+                      Redirigiendo...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="16" fill="white" />
+                        <path d="M8.5 20.5c.7 1.2 2 2 3.5 2h7c1.5 0 2.8-.8 3.5-2l2-3.5c.3-.5.5-1.1.5-1.7V13c0-2.2-1.8-4-4-4h-4l-1.5 2.5H17c.8 0 1.5.7 1.5 1.5S17.8 14.5 17 14.5h-1l-1.5 2.5h2.5c.8 0 1.5.7 1.5 1.5S17.8 20 17 20h-5c-.5 0-1-.2-1.3-.5L8.5 20.5z" fill="#009EE3" />
+                      </svg>
+                      {isTokenExpired ? 'Reconectar con Mercado Pago' : 'Conectar con Mercado Pago'}
+                    </>
+                  )}
                 </button>
-
-                {connectError && (
-                  <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{connectError}</p>
-                )}
-                {connectSuccess && (
-                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    Cuenta de Mercado Pago conectada correctamente.
-                  </p>
-                )}
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isPending || !token.trim()}
-                    className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    {isPending ? (
-                      <span className="flex items-center gap-2">
-                        <Spinner size="sm" className="border-white" />
-                        Verificando...
-                      </span>
-                    ) : isTokenExpired ? (
-                      'Reconectar'
-                    ) : (
-                      'Conectar'
-                    )}
-                  </button>
-                </div>
-              </form>
+                <p className="text-center text-xs text-muted">
+                  Serás redirigido a Mercado Pago para autorizar el acceso. No compartimos ni almacenamos tu contraseña.
+                </p>
+              </div>
             ) : (
               <p className="text-sm text-muted">
                 {isTokenExpired
@@ -174,71 +193,6 @@ export function MpConnectSection() {
               </p>
             )}
           </div>
-        )}
-
-        {showMpGuide && (
-          <SlideOver title="Cómo conectar Mercado Pago" onClose={() => setShowMpGuide(false)}>
-            <div className="flex flex-col gap-6 overflow-y-auto px-6 py-6">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                <p className="text-sm font-medium text-amber-900">Importante</p>
-                <p className="mt-1 text-sm text-amber-800">
-                  Necesitás un <strong>Access Token de producción</strong>. El token de prueba (test) no funciona para cobros reales ni para recibir notificaciones.
-                </p>
-              </div>
-
-              <ol className="flex flex-col gap-6">
-                <li className="flex gap-4">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">1</span>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-semibold text-foreground">Crear una aplicación en MP Developers</p>
-                    <p className="text-sm text-muted">
-                      Ingresá a{' '}
-                      <a href="https://www.mercadopago.com.ar/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
-                        mercadopago.com.ar/developers/panel/app
-                      </a>
-                      {' '}y hacé click en <strong>Crear aplicación</strong>.
-                    </p>
-                    <p className="text-sm text-muted">
-                      Completá el nombre (puede ser cualquiera, ej. &quot;Pay Alert&quot;) y aceptá los términos.
-                    </p>
-                  </div>
-                </li>
-
-                <li className="flex gap-4">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">2</span>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-semibold text-foreground">Copiar el Access Token de producción</p>
-                    <p className="text-sm text-muted">
-                      Dentro de tu aplicación, andá a <strong>Credenciales</strong> → <strong>Producción</strong>.
-                    </p>
-                    <p className="text-sm text-muted">
-                      Copiá el campo <strong>Access Token</strong>. Empieza con <code className="rounded bg-muted/20 px-1 font-mono text-xs">APP_USR-</code>
-                    </p>
-                  </div>
-                </li>
-
-                <li className="flex gap-4">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">3</span>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-semibold text-foreground">Pegarlo en Pay Alert</p>
-                    <p className="text-sm text-muted">
-                      Cerrá esta guía, pegá el token en el campo <strong>Access Token de Mercado Pago</strong> y hacé click en <strong>Conectar</strong>.
-                    </p>
-                  </div>
-                </li>
-              </ol>
-
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowMpGuide(false)}
-                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                >
-                  Entendido
-                </button>
-              </div>
-            </div>
-          </SlideOver>
         )}
 
         {showDisconnect && (

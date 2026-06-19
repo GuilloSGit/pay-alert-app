@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
-import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { ONBOARDING_DONE_KEY } from '@/components/layout/Sidebar'
 import type { ApiResponse } from '@/types'
@@ -200,37 +199,37 @@ function Step1({
 
 // ─── Step 2: Conectar MP ──────────────────────────────────────────────────────
 
+const MP_ONBOARDING_ERROR_MESSAGES: Record<string, string> = {
+  cancelled: 'Cancelaste la autorización. Podés intentarlo de nuevo cuando quieras.',
+  already_connected: 'Esta cuenta de Mercado Pago ya está conectada a otro comercio.',
+  token_exchange_failed: 'Hubo un error al conectar con Mercado Pago. Intentá de nuevo.',
+  invalid_state: 'El enlace de autorización expiró. Intentá de nuevo.',
+}
+
 function Step2({
   businessId,
-  onNext,
   onSkip,
+  oauthError,
 }: {
   businessId: string
-  onNext: (mpConnected: boolean) => void
   onSkip: () => void
+  oauthError?: string | null
 }) {
-  const [token, setToken] = useState('')
   const [isPending, setIsPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showGuide, setShowGuide] = useState(false)
+  const [error, setError] = useState<string | null>(
+    oauthError ? (MP_ONBOARDING_ERROR_MESSAGES[oauthError] ?? 'Error al conectar con Mercado Pago.') : null,
+  )
 
-  async function handleConnect(e: React.FormEvent) {
-    e.preventDefault()
-    if (!token.trim()) return
+  async function handleOAuth() {
     setError(null)
     setIsPending(true)
     try {
-      await api.post(`/api/v1/businesses/${businessId}/mp-connect`, { accessToken: token.trim() })
-      onNext(true)
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'INVALID_MP_TOKEN') {
-        setError('El token es inválido o no tiene los permisos necesarios. Verificá que sea el Access Token de producción.')
-      } else if (err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('No se pudo conectar la cuenta. Intentá de nuevo.')
-      }
-    } finally {
+      const res = await api.get<ApiResponse<{ url: string }>>(
+        `/api/v1/businesses/${businessId}/mp-connect/oauth?returnTo=/onboarding`,
+      )
+      window.location.href = res.data.url
+    } catch {
+      setError('No se pudo iniciar la conexión. Intentá de nuevo.')
       setIsPending(false)
     }
   }
@@ -240,52 +239,35 @@ function Step2({
       <div>
         <h2 className="text-xl font-bold text-gray-900">Conectá tu cuenta de Mercado Pago</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Pay Alert necesita tu Access Token de producción para recibir las notificaciones de pagos en tiempo real.
+          Autorizá a Pay Alert para recibir notificaciones de tus pagos en tiempo real. No almacenamos tu contraseña ni accedemos a tus fondos.
         </p>
       </div>
 
-      <form onSubmit={handleConnect} className="space-y-4">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label className="block text-sm font-medium text-gray-700">Access Token de producción</label>
-            <button
-              type="button"
-              onClick={() => setShowGuide((v) => !v)}
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              ¿Cómo lo obtengo?
-            </button>
-          </div>
-          <PasswordInput
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="APP_USR-..."
-          />
-        </div>
+      {error && (
+        <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>
+      )}
 
-        {showGuide && (
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 space-y-1.5">
-            <p className="font-semibold">Cómo obtener el Access Token:</p>
-            <ol className="list-decimal list-inside space-y-1 text-blue-700">
-              <li>Ingresá a <span className="font-medium">mercadopago.com.ar</span> con la cuenta del comercio</li>
-              <li>Andá a <span className="font-medium">Tu negocio → Integraciones → Credenciales de producción</span></li>
-              <li>Copiá el <span className="font-medium">Access Token</span> (empieza con APP_USR-)</li>
-            </ol>
-          </div>
+      <button
+        type="button"
+        onClick={handleOAuth}
+        disabled={isPending}
+        className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-[#009EE3] bg-[#009EE3] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      >
+        {isPending ? (
+          <>
+            <Spinner size="sm" className="border-white" />
+            Redirigiendo a Mercado Pago...
+          </>
+        ) : (
+          <>
+            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="16" fill="white" />
+              <path d="M8.5 20.5c.7 1.2 2 2 3.5 2h7c1.5 0 2.8-.8 3.5-2l2-3.5c.3-.5.5-1.1.5-1.7V13c0-2.2-1.8-4-4-4h-4l-1.5 2.5H17c.8 0 1.5.7 1.5 1.5S17.8 14.5 17 14.5h-1l-1.5 2.5h2.5c.8 0 1.5.7 1.5 1.5S17.8 20 17 20h-5c-.5 0-1-.2-1.3-.5L8.5 20.5z" fill="#009EE3" />
+            </svg>
+            Autorizar con Mercado Pago
+          </>
         )}
-
-        {error && (
-          <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={!token.trim() || isPending}
-          className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {isPending ? <Spinner size="sm" /> : 'Conectar Mercado Pago →'}
-        </button>
-      </form>
+      </button>
 
       <button
         type="button"
@@ -442,6 +424,8 @@ function OnboardingContent() {
   const router = useRouter()
   const params = useSearchParams()
   const initialPlan = params.get('plan') ?? undefined
+  const oauthResult = params.get('mp') // 'connected' | 'error' | null
+  const oauthError = params.get('mp_error') // error code de MP
   const [step, setStep] = useState<1 | 2 | 3 | null>(null) // null = cargando
   const [businessId, setBusinessId] = useState<string | null>(null)
 
@@ -530,8 +514,8 @@ function OnboardingContent() {
               {step === 2 && businessId && (
                 <Step2
                   businessId={businessId}
-                  onNext={handleStep2Done}
                   onSkip={() => handleStep2Done(false)}
+                  oauthError={oauthResult === 'error' ? oauthError : null}
                 />
               )}
               {step === 3 && businessId && (
