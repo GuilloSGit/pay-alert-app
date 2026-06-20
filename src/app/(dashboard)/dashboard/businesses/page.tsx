@@ -1,13 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Spinner } from '@/components/ui/Spinner'
 import { api, ApiError } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { Business, ApiResponse } from '@/types'
+
+const MP_ERROR_MESSAGES: Record<string, string> = {
+  cancelled: 'Cancelaste la autorización en Mercado Pago.',
+  already_connected: 'Esta cuenta de Mercado Pago ya está conectada a otro comercio.',
+  token_exchange_failed: 'Hubo un error al obtener los tokens de Mercado Pago. Intentá de nuevo.',
+  invalid_state: 'El enlace de autorización expiró. Intentá de nuevo.',
+  not_configured: 'OAuth de MP no configurado. Contactá a soporte.',
+}
 
 interface MpConnection {
   mpUserId: string
@@ -88,11 +98,27 @@ export default function BusinessesPage() {
   const [editError, setEditError] = useState<string | null>(null)
 
   // MP connect state
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [accessToken, setAccessToken] = useState('')
-  const [isSubmittingToken, setIsSubmittingToken] = useState(false)
-  const [tokenError, setTokenError] = useState<string | null>(null)
+  const [isPending, setIsPending] = useState(false)
+  const [oauthError, setOauthError] = useState<string | null>(null)
+  const [oauthSuccess, setOauthSuccess] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
+
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  useEffect(() => {
+    const mp = searchParams.get('mp')
+    const mpError = searchParams.get('mp_error')
+    if (mp) {
+      if (mp === 'connected') setOauthSuccess(true)
+      else if (mp === 'error') setOauthError(MP_ERROR_MESSAGES[mpError ?? ''] ?? 'Error al conectar con Mercado Pago.')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('mp')
+      url.searchParams.delete('mp_error')
+      url.searchParams.delete('businessId')
+      router.replace(url.pathname + (url.search || ''), { scroll: false })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!businessId) return
@@ -142,21 +168,18 @@ export default function BusinessesPage() {
     }
   }
 
-  async function connectMp() {
-    if (!businessId || !accessToken.trim()) return
-    setIsSubmittingToken(true)
-    setTokenError(null)
+  async function handleOAuth() {
+    if (!businessId) return
+    setIsPending(true)
+    setOauthError(null)
     try {
-      const res = await api.post<ApiResponse<MpConnection>>(`/api/v1/businesses/${businessId}/mp-connect`, {
-        accessToken: accessToken.trim(),
-      })
-      setMpConnection(res.data)
-      setAccessToken('')
-      setIsConnecting(false)
-    } catch (e) {
-      setTokenError(e instanceof ApiError ? e.message : 'Error al conectar')
-    } finally {
-      setIsSubmittingToken(false)
+      const res = await api.get<ApiResponse<{ url: string }>>(
+        `/api/v1/businesses/${businessId}/mp-connect/oauth?returnTo=/dashboard/businesses`,
+      )
+      window.location.href = res.data.url
+    } catch {
+      setOauthError('No se pudo iniciar la conexión. Intentá de nuevo.')
+      setIsPending(false)
     }
   }
 
@@ -306,10 +329,11 @@ export default function BusinessesPage() {
                 <div className={`h-2 w-2 rounded-full ${mpConnection?.isActive ? 'bg-emerald-500' : 'bg-gray-300'}`} />
                 <h2 className="text-base font-semibold text-foreground">Mercado Pago</h2>
               </div>
-              {isOwner && mpConnection && !isConnecting && (
+              {isOwner && mpConnection && (
                 <button
-                  onClick={() => { setIsConnecting(true); setTokenError(null); setAccessToken('') }}
-                  className="text-sm font-medium text-primary hover:underline"
+                  onClick={handleOAuth}
+                  disabled={isPending}
+                  className="text-sm font-medium text-primary hover:underline disabled:opacity-50"
                 >
                   Reconectar
                 </button>
@@ -320,103 +344,66 @@ export default function BusinessesPage() {
               <div className="space-y-3">{skeleton}{skeleton}</div>
             ) : mpConnection ? (
               <div className="space-y-3">
-                {isConnecting ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted">Ingresá el nuevo access token de Mercado Pago para reconectar.</p>
-                    <input
-                      type="password"
-                      value={accessToken}
-                      onChange={(e) => setAccessToken(e.target.value)}
-                      placeholder="APP_USR-…"
-                      className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    {tokenError && <p className="text-sm text-red-600">{tokenError}</p>}
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={connectMp}
-                        disabled={isSubmittingToken || !accessToken.trim()}
-                        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-                      >
-                        {isSubmittingToken ? 'Verificando…' : 'Reconectar'}
-                      </button>
-                      <button
-                        onClick={() => setIsConnecting(false)}
-                        disabled={isSubmittingToken}
-                        className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
+                {oauthSuccess && (
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                    Cuenta reconectada correctamente.
+                  </p>
+                )}
+                {oauthError && (
+                  <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{oauthError}</p>
+                )}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Usuario MP</p>
+                  <p className="mt-1 font-mono text-sm text-foreground">{mpConnection.mpUserId}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Conectado</p>
+                  <p className="mt-1 text-sm text-foreground">{formatDate(mpConnection.connectedAt)}</p>
+                </div>
+                {mpConnection.lastVerifiedAt && (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted">Última verificación</p>
+                    <p className="mt-1 text-sm text-foreground">{formatDate(mpConnection.lastVerifiedAt)}</p>
                   </div>
-                ) : (
-                  <>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">Usuario MP</p>
-                      <p className="mt-1 font-mono text-sm text-foreground">{mpConnection.mpUserId}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">Conectado</p>
-                      <p className="mt-1 text-sm text-foreground">{formatDate(mpConnection.connectedAt)}</p>
-                    </div>
-                    {mpConnection.lastVerifiedAt && (
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted">Última verificación</p>
-                        <p className="mt-1 text-sm text-foreground">{formatDate(mpConnection.lastVerifiedAt)}</p>
-                      </div>
-                    )}
-                    {isOwner && (
-                      <button
-                        onClick={disconnectMp}
-                        disabled={isDisconnecting}
-                        className="mt-2 text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
-                      >
-                        {isDisconnecting ? 'Desconectando…' : 'Desconectar cuenta'}
-                      </button>
-                    )}
-                  </>
+                )}
+                {isOwner && (
+                  <button
+                    onClick={disconnectMp}
+                    disabled={isDisconnecting}
+                    className="mt-2 text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
+                  >
+                    {isDisconnecting ? 'Desconectando…' : 'Desconectar cuenta'}
+                  </button>
                 )}
               </div>
             ) : (
               <div className="space-y-3">
+                {oauthError && (
+                  <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{oauthError}</p>
+                )}
                 <p className="text-sm text-muted">
-                  Sin cuenta de Mercado Pago conectada. Ingresá tu access token para empezar a recibir alertas de cobros.
+                  Sin cuenta de Mercado Pago conectada. Autorizá el acceso para empezar a recibir alertas de cobros.
                 </p>
                 {isOwner ? (
-                  isConnecting ? (
-                    <div className="space-y-3">
-                      <input
-                        type="password"
-                        value={accessToken}
-                        onChange={(e) => setAccessToken(e.target.value)}
-                        placeholder="APP_USR-…"
-                        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      {tokenError && <p className="text-sm text-red-600">{tokenError}</p>}
-                      <div className="flex items-center gap-3">
+                  <div className="space-y-3">
                         <button
-                          onClick={connectMp}
-                          disabled={isSubmittingToken || !accessToken.trim()}
-                          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+                          onClick={handleOAuth}
+                          disabled={isPending}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-[#009EE3] bg-[#009EE3] py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
-                          {isSubmittingToken ? 'Verificando…' : 'Conectar'}
+                          {isPending ? (
+                            <><Spinner size="sm" className="border-white" />Redirigiendo...</>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="16" fill="white" />
+                                <path d="M8.5 20.5c.7 1.2 2 2 3.5 2h7c1.5 0 2.8-.8 3.5-2l2-3.5c.3-.5.5-1.1.5-1.7V13c0-2.2-1.8-4-4-4h-4l-1.5 2.5H17c.8 0 1.5.7 1.5 1.5S17.8 14.5 17 14.5h-1l-1.5 2.5h2.5c.8 0 1.5.7 1.5 1.5S17.8 20 17 20h-5c-.5 0-1-.2-1.3-.5L8.5 20.5z" fill="#009EE3" />
+                              </svg>
+                              Conectar con Mercado Pago
+                            </>
+                          )}
                         </button>
-                        <button
-                          onClick={() => { setIsConnecting(false); setTokenError(null) }}
-                          disabled={isSubmittingToken}
-                          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { setIsConnecting(true); setTokenError(null) }}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-                    >
-                      Conectar Mercado Pago
-                    </button>
-                  )
+                  </div>
                 ) : (
                   <p className="text-sm text-muted">Solo el propietario puede conectar la cuenta.</p>
                 )}
