@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -19,21 +19,19 @@ const MP_ERROR_MESSAGES: Record<string, string> = {
   not_configured: 'OAuth de MP no configurado. Contactá a soporte.',
 }
 
-export function MpConnectSection() {
-  const { businessId, role } = useActiveBusiness()
-  const queryClient = useQueryClient()
+function MpCallbackHandler({
+  businessId,
+  setOauthSuccess,
+  setOauthError,
+}: {
+  businessId: string | null
+  setOauthSuccess: (v: boolean) => void
+  setOauthError: (v: string | null) => void
+}) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const isOwner = role === 'OWNER'
+  const queryClient = useQueryClient()
 
-  const [isPending, setIsPending] = useState(false)
-  const [oauthError, setOauthError] = useState<string | null>(null)
-  const [oauthSuccess, setOauthSuccess] = useState(false)
-  const [showDisconnect, setShowDisconnect] = useState(false)
-  const [isDisconnecting, setIsDisconnecting] = useState(false)
-  const [disconnectError, setDisconnectError] = useState<string | null>(null)
-
-  // Leer resultado del callback OAuth de la URL
   useEffect(() => {
     const mp = searchParams.get('mp')
     const mpError = searchParams.get('mp_error')
@@ -46,13 +44,27 @@ export function MpConnectSection() {
       setOauthError(MP_ERROR_MESSAGES[mpError ?? ''] ?? 'Error al conectar con Mercado Pago.')
     }
 
-    // Limpiar params de la URL sin recargar
     const url = new URL(window.location.href)
     url.searchParams.delete('mp')
     url.searchParams.delete('mp_error')
     url.searchParams.delete('businessId')
     router.replace(url.pathname + (url.search || ''), { scroll: false })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null
+}
+
+export function MpConnectSection() {
+  const { businessId, role } = useActiveBusiness()
+  const queryClient = useQueryClient()
+  const isOwner = role === 'OWNER'
+
+  const [isPending, setIsPending] = useState(false)
+  const [oauthError, setOauthError] = useState<string | null>(null)
+  const [oauthSuccess, setOauthSuccess] = useState(false)
+  const [showDisconnect, setShowDisconnect] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
+  const [disconnectError, setDisconnectError] = useState<string | null>(null)
 
   const { data: connection, isLoading } = useQuery({
     queryKey: ['mp-connect', businessId],
@@ -98,6 +110,9 @@ export function MpConnectSection() {
 
   return (
     <div id="mp-connect">
+      <Suspense fallback={null}>
+        <MpCallbackHandler businessId={businessId} setOauthSuccess={setOauthSuccess} setOauthError={setOauthError} />
+      </Suspense>
       <Card>
         <CardHeader>
           <CardTitle>Conexión con Mercado Pago</CardTitle>
