@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
@@ -8,6 +8,95 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api } from '@/lib/api'
 import { registerPushIfPermitted } from '@/lib/push'
 import { type Device, PLATFORM_LABELS, formatRelative, formatDate } from './types'
+
+// BeforeInstallPromptEvent no está en los tipos estándar de TypeScript
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+function InstallPwaBanner() {
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isIosNotInstalled, setIsIosNotInstalled] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const [installing, setInstalling] = useState(false)
+  const promptRef = useRef<BeforeInstallPromptEvent | null>(null)
+
+  useEffect(() => {
+    // ¿Está corriendo como PWA instalada?
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in navigator && (navigator as Record<string, unknown>).standalone === true)
+    if (isStandalone) return
+
+    // iOS Safari: no hay evento de install, mostramos instrucciones manuales
+    const ua = navigator.userAgent
+    const isIos = /iPhone|iPad|iPod/.test(ua)
+    const isSafariIos = isIos && /Safari/i.test(ua) && !/CriOS|FxiOS/.test(ua)
+    if (isSafariIos) {
+      setIsIosNotInstalled(true)
+      return
+    }
+
+    // Android / desktop Chrome: escuchar BeforeInstallPromptEvent
+    const handler = (e: Event) => {
+      e.preventDefault()
+      promptRef.current = e as BeforeInstallPromptEvent
+      setInstallPrompt(e as BeforeInstallPromptEvent)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleInstall() {
+    if (!installPrompt) return
+    setInstalling(true)
+    await installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setDismissed(true)
+    setInstalling(false)
+  }
+
+  if (dismissed || (!installPrompt && !isIosNotInstalled)) return null
+
+  if (isIosNotInstalled) {
+    return (
+      <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <p className="text-sm font-medium text-emerald-800">Instalá Pay Alert en tu iPhone</p>
+        <p className="mt-1 text-xs text-emerald-700">
+          Tocá <strong>Compartir</strong> (
+          <svg className="inline h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z" />
+          </svg>
+          ) y luego <strong>"Agregar a inicio"</strong> para recibir notificaciones cuando el browser esté cerrado.
+        </p>
+        <button onClick={() => setDismissed(true)} className="mt-2 text-xs text-emerald-600 underline">
+          Entendido
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+      <p className="text-sm text-emerald-800">
+        Instalá Pay Alert para recibir notificaciones aunque el browser esté cerrado.
+      </p>
+      <div className="ml-4 flex gap-2">
+        <button
+          onClick={handleInstall}
+          disabled={installing}
+          className="flex-shrink-0 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {installing ? 'Instalando...' : 'Instalar app'}
+        </button>
+        <button onClick={() => setDismissed(true)} className="text-xs text-emerald-600 underline">
+          Ahora no
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function PlatformIcon({ platform }: { platform: Device['platform'] }) {
   if (platform === 'android') {
@@ -43,6 +132,7 @@ export function DevicesSection() {
     return null
   })
   const [isActivatingPush, setIsActivatingPush] = useState(false)
+  const [testPushStatus, setTestPushStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   async function handleActivatePush() {
     setIsActivatingPush(true)
@@ -50,6 +140,18 @@ export function DevicesSection() {
     if ('Notification' in window) setPushPermission(Notification.permission)
     void queryClient.invalidateQueries({ queryKey: ['devices'] })
     setIsActivatingPush(false)
+  }
+
+  async function handleTestPush() {
+    setTestPushStatus('sending')
+    try {
+      await api.post('/api/v1/users/me/test-push', {})
+      setTestPushStatus('sent')
+      setTimeout(() => setTestPushStatus('idle'), 4000)
+    } catch {
+      setTestPushStatus('error')
+      setTimeout(() => setTestPushStatus('idle'), 3000)
+    }
   }
 
   const { data: devices, isLoading } = useQuery({
@@ -79,6 +181,8 @@ export function DevicesSection() {
         <CardTitle>Dispositivos vinculados</CardTitle>
         <CardDescription>Dispositivos que reciben notificaciones push de pagos.</CardDescription>
       </CardHeader>
+
+      <InstallPwaBanner />
 
       {pushPermission !== null && pushPermission !== 'granted' && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
@@ -135,6 +239,24 @@ export function DevicesSection() {
             </li>
           ))}
         </ul>
+      )}
+
+      {devices && devices.length > 0 && pushPermission === 'granted' && (
+        <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
+          <button
+            onClick={handleTestPush}
+            disabled={testPushStatus === 'sending'}
+            className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          >
+            {testPushStatus === 'sending' ? 'Enviando...' : testPushStatus === 'sent' ? '¡Enviada!' : testPushStatus === 'error' ? 'Error al enviar' : 'Probar notificación'}
+          </button>
+          {testPushStatus === 'sent' && (
+            <p className="text-xs text-muted">Minimizá el browser para verla como notificación nativa del sistema.</p>
+          )}
+          {testPushStatus === 'idle' && (
+            <p className="text-xs text-muted">Minimizá el browser antes de probar para verla como notificación nativa.</p>
+          )}
+        </div>
       )}
 
       {revokeTarget && (
