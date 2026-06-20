@@ -194,9 +194,9 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/onboarding` | `src/app/onboarding/page.tsx` | ✅ Wizard 3 pasos standalone (sin sidebar). Skip inteligente: detecta negocio+MP al cargar, salta al paso correcto. `localStorage['pa_onboarding_done']` = controla visibilidad del sidebar item. |
 | `/dashboard` | `src/app/(dashboard)/dashboard/page.tsx` | ✅ Stats + últimos pagos |
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
-| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP, suscripción. Rubro: select 11 categorías. |
+| `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP (OAuth), suscripción. Rubro: select 11 categorías. Form APP_USR- eliminado — solo OAuth. |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
-| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + Seguridad + Dispositivos + MP Connect + Suscripción con plan picker inline |
+| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + Seguridad + Dispositivos + MP Connect + Suscripción. Banner "Asistente de configuración" → /onboarding |
 | `/dashboard/facturacion` | `src/app/(dashboard)/dashboard/facturacion/page.tsx` | ✅ OWNER only. Historial invoices paginado. Descarga PDF con `src/lib/invoice-pdf.ts` (jsPDF dinámico). |
 | `/dashboard/cierres` | `src/app/(dashboard)/dashboard/cierres/page.tsx` | ✅ Tabla cierres con blur-gate por plan |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
@@ -267,7 +267,7 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 
 `registerPushIfPermitted()` en `src/lib/push.ts` pide permiso al browser, registra el SW de FCM y hace POST a `/users/me/devices`.
 
-**Regla:** nunca llamar `registerPushIfPermitted()` automáticamente (ej: al login). El permiso solo se pide cuando el usuario hace click explícito en "Activar" (botón en `DevicesSection`). Llamarla sin gesto de usuario falla silenciosamente en mobile y es percibido como intrusivo.
+**Regla (sesión 32 — actualizada):** `registerPushIfPermitted()` se llama automáticamente desde `DashboardShell` al montar (junto con `registerDevice()`). No espera un click del usuario. La primera vez que el usuario entra al dashboard, el browser muestra el popup de permiso. Esto es deseable: sin MP conectado ni notificaciones configuradas, Pay Alert no sirve de nada. También se llama desde `DevicesSection` para refrescar el estado.
 
 `DevicesSection` lee `Notification.permission` con `useState` lazy (no `useEffect`) y muestra un banner si `!== 'granted'`.
 - **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries.
@@ -350,7 +350,24 @@ member@test.com / Test1234!  → MEMBER
 
 ---
 
-## Roadmap FE — pendientes (estado 2026-06-17)
+### NoMpConnectionBanner (sesión 33)
+`src/components/ui/NoMpConnectionBanner.tsx` — componente que verifica si hay MP conectado y activo.
+- Usa `useQuery(['mp-connect', businessId])` con `staleTime: 60_000` (mismo queryKey que MpConnectSection → cache compartida)
+- Si `connection === null || !connection.isActive` → banner naranja con CTA
+- Si activo → `return null` (invisible)
+- OWNER: botón OAuth directo + link al asistente `/onboarding`
+- Otros roles: "Avisale al propietario del comercio"
+- Renderizado al principio de `/dashboard/page.tsx` y `/dashboard/payments/page.tsx`
+
+### OAuth MP — flujo de retorno (sesión 32-33)
+El backend valida `returnTo` contra `ALLOWED_RETURN_PATHS` (hardcodeada en `mp-connect.ts`):
+```ts
+const ALLOWED_RETURN_PATHS = ['/dashboard/settings', '/onboarding', '/dashboard/businesses']
+```
+Si se agrega una nueva página que debe recibir `?mp=connected` al volver, agregar aquí.
+Los params se leen con `useSearchParams()` y se limpian con `router.replace(pathname)` para no quedar en la URL.
+
+## Roadmap FE — pendientes (estado 2026-06-20)
 
 ### ✅ Completados esta sesión (sesión 9 — 2026-06-17)
 - **P3 Onboarding MP Connect — SlideOver:** link "¿Cómo obtengo el token?" bajo el `PasswordInput` en `MpConnectSection` (solo OWNER, solo cuando no hay MP conectado). Abre `SlideOver` con banner naranja "Necesitás un Access Token de producción" + 3 pasos numerados: (1) crear app en mercadopago.com.ar/developers/panel/app, (2) copiar Access Token desde Credenciales → Producción (monospace `APP_USR-`), (3) pegar en Settings → Conectar. Botón "Entendido" cierra.
