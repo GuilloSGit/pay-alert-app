@@ -270,6 +270,8 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 **Regla (sesión 32 — actualizada):** `registerPushIfPermitted()` se llama automáticamente desde `DashboardShell` al montar (junto con `registerDevice()`). No espera un click del usuario. La primera vez que el usuario entra al dashboard, el browser muestra el popup de permiso. Esto es deseable: sin MP conectado ni notificaciones configuradas, Pay Alert no sirve de nada. También se llama desde `DevicesSection` para refrescar el estado.
 
 `DevicesSection` lee `Notification.permission` con `useState` lazy (no `useEffect`) y muestra un banner si `!== 'granted'`.
+
+**Device names (sesión 35):** `push.ts` detecta browser + OS del userAgent y construye `deviceName = "${browser} en ${os}"` antes de registrar el dispositivo. Si `Notification.permission === 'granted'`, el banner "Activar" no aparece — eso es correcto. Para testar push en producción sin pago real de MP: `curl -X POST https://pay-alert-api.onrender.com/api/v1/admin/test-notification/<businessId> -H "x-admin-api-key: <ADMIN_API_KEY>"`
 - **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries.
 
 ### Jerarquía de roles
@@ -381,7 +383,10 @@ function MpCallbackHandler({ setFoo, setBar }) {
   <MpCallbackHandler setFoo={setFoo} setBar={setBar} />
 </Suspense>
 ```
-Aplicado en `businesses/page.tsx` (sesión 34).
+Aplicado en `businesses/page.tsx` y `settings/_sections/MpConnectSection.tsx` (sesión 34-35). Verificar con build local antes de push.
+
+**Gotcha — SameSite=Lax en pa_session:**  
+`pa_session` en `src/lib/auth.ts` usa `SameSite=Lax`, NO `SameSite=Strict`. Con Strict, el cookie no llega en redirects cross-site top-level (ej: volver del OAuth de MP desde `onrender.com` → `pay-alert.com.ar`), y el middleware de Next.js redirige al login en vez del dashboard. No cambiar a Strict.
 
 ## Roadmap FE — pendientes (estado 2026-06-20)
 
