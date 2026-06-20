@@ -21,7 +21,9 @@ export function saveSession(token: string, user: User): void {
   localStorage.setItem(USER_KEY, serialized)
   // Indicador no sensible para que el middleware de Next.js sepa que hay sesión.
   // La seguridad real la provee la httpOnly cookie `refresh_token` del backend.
-  document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Strict${
+  // SameSite=Lax (no Strict) para que el cookie sobreviva el redirect cross-site
+  // del callback OAuth de MP (onrender.com → pay-alert.com.ar).
+  document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax${
     location.protocol === 'https:' ? '; Secure' : ''
   }`
 }
