@@ -4,11 +4,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Nunca más confíes en comprobantes falsos',
   description:
-    'Recibí confirmaciones reales de Mercado Pago en menos de 15 segundos. Tu equipo ve las alertas que vos querés, sin acceso a tu cuenta.',
+    'Recibí confirmaciones reales de Mercado Pago en segundos. Tu equipo ve las alertas que vos querés, sin acceso a tu cuenta.',
   openGraph: {
     title: 'Pay Alert — Nunca más confíes en comprobantes falsos',
     description:
-      'Recibí confirmaciones reales de Mercado Pago en menos de 15 segundos. Tu equipo ve las alertas que vos querés, sin acceso a tu cuenta.',
+      'Recibí confirmaciones reales de Mercado Pago en segundos. Tu equipo ve las alertas que vos querés, sin acceso a tu cuenta.',
     url: 'https://pay-alert.com.ar',
     type: 'website',
   },
@@ -115,13 +115,21 @@ function DeviceIcon() {
   )
 }
 
+function SavingsIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const TRUST = [
   { icon: ShieldIcon, label: 'SSL Seguro' },
-  { icon: LockIcon, label: 'Encriptación E2E' },
-  { icon: UptimeIcon, label: '99.9% Uptime' },
-  { icon: MPIcon, label: 'Integración oficial MP' },
+  { icon: LockIcon, label: 'Tokens cifrados (AES-256)' },
+  { icon: UptimeIcon, label: 'Alta disponibilidad' },
+  { icon: MPIcon, label: 'API oficial de Mercado Pago' },
 ]
 
 const FEATURES = [
@@ -132,8 +140,8 @@ const FEATURES = [
   },
   {
     icon: BoltIcon,
-    title: 'Menos de 15 segundos',
-    description: 'Desde que el cliente confirma el pago hasta que tu equipo recibe la notificación pasan menos de 15 segundos.',
+    title: 'Alertas en segundos',
+    description: 'Desde que el cliente confirma el pago, la notificación llega a tu equipo en segundos — sin que nadie tenga que revisar nada.',
   },
   {
     icon: TeamIcon,
@@ -155,13 +163,18 @@ const FEATURES = [
     title: 'Cualquier dispositivo',
     description: 'Funciona en cualquier navegador — celular, tablet o computadora. Sin app que instalar.',
   },
+  {
+    icon: SavingsIcon,
+    title: 'Cobrá por el canal más barato',
+    description: 'QR y transferencia tienen comisiones mucho menores que el Point. Tu equipo se entera igual — sin importar cómo pagó el cliente.',
+  },
 ]
 
 const STEPS = [
   {
     n: '01',
     title: 'Conectá tu cuenta de Mercado Pago',
-    description: 'Vinculás tu cuenta MP en segundos usando la integración oficial. No compartís tu contraseña.',
+    description: 'Autorizás el acceso a tu cuenta MP en segundos con OAuth seguro. No compartís tu contraseña.',
   },
   {
     n: '02',
@@ -225,7 +238,7 @@ const PLANS = [
       'Usuarios ilimitados',
       'Historial completo',
       'Webhooks salientes',
-      'SLA garantizado',
+      'SLA por contrato',
       'Soporte 24/7',
     ],
     cta: 'Hablar con ventas',
@@ -307,7 +320,7 @@ export default function LandingPage() {
               <div className="flex-1">
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-800/60 bg-emerald-950/60 px-3.5 py-1.5 text-xs font-medium text-emerald-400">
                   <span className="animate-pulse-live h-1.5 w-1.5 rounded-full bg-primary" />
-                  Verificado por Mercado Pago
+                  Integrado con Mercado Pago
                 </div>
 
                 <h1 className="mb-5 text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-[3.25rem]">
@@ -326,7 +339,7 @@ export default function LandingPage() {
 
                 <p className="mb-8 max-w-md text-base leading-relaxed text-white/60 md:text-[17px]">
                   Tu equipo recibe la confirmación directamente de Mercado Pago —{' '}
-                  <strong className="font-semibold text-white/90">en menos de 15 segundos</strong>,
+                  <strong className="font-semibold text-white/90">en segundos</strong>,
                   sin darles acceso a tu cuenta.
                 </p>
 
@@ -416,9 +429,9 @@ export default function LandingPage() {
             {/* Metrics strip */}
             <div className="mt-16 grid grid-cols-3 divide-x divide-white/8 border-t border-white/8 pt-8">
               {[
-                { value: '< 15 seg', label: 'Tiempo de alerta' },
-                { value: '99.9%', label: 'Uptime garantizado' },
-                { value: '0', label: 'Comprobantes falsos aceptados' },
+                { value: 'Segundos', label: 'Tiempo de alerta' },
+                { value: '99.9%', label: 'Uptime objetivo' },
+                { value: 'Cero', label: 'Acceso del equipo a tu cuenta MP' },
               ].map((m) => (
                 <div key={m.label} className="px-6 py-2 text-center first:pl-0 last:pr-0 md:text-left">
                   <div className="font-mono text-2xl font-bold text-primary md:text-3xl">{m.value}</div>
