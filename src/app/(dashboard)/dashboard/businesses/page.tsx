@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
@@ -79,6 +79,33 @@ function formatDate(dateStr: string | null | undefined) {
   }).format(new Date(dateStr))
 }
 
+function MpCallbackHandler({
+  setOauthSuccess,
+  setOauthError,
+}: {
+  setOauthSuccess: (v: boolean) => void
+  setOauthError: (v: string | null) => void
+}) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  useEffect(() => {
+    const mp = searchParams.get('mp')
+    const mpError = searchParams.get('mp_error')
+    if (mp) {
+      if (mp === 'connected') setOauthSuccess(true)
+      else if (mp === 'error') setOauthError(MP_ERROR_MESSAGES[mpError ?? ''] ?? 'Error al conectar con Mercado Pago.')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('mp')
+      url.searchParams.delete('mp_error')
+      url.searchParams.delete('businessId')
+      router.replace(url.pathname + (url.search || ''), { scroll: false })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null
+}
+
 export default function BusinessesPage() {
   const { businessId, businessName, role } = useActiveBusiness()
   const isOwner = role === 'OWNER'
@@ -102,23 +129,6 @@ export default function BusinessesPage() {
   const [oauthError, setOauthError] = useState<string | null>(null)
   const [oauthSuccess, setOauthSuccess] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
-
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  useEffect(() => {
-    const mp = searchParams.get('mp')
-    const mpError = searchParams.get('mp_error')
-    if (mp) {
-      if (mp === 'connected') setOauthSuccess(true)
-      else if (mp === 'error') setOauthError(MP_ERROR_MESSAGES[mpError ?? ''] ?? 'Error al conectar con Mercado Pago.')
-      const url = new URL(window.location.href)
-      url.searchParams.delete('mp')
-      url.searchParams.delete('mp_error')
-      url.searchParams.delete('businessId')
-      router.replace(url.pathname + (url.search || ''), { scroll: false })
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!businessId) return
@@ -200,6 +210,9 @@ export default function BusinessesPage() {
 
   return (
     <PageShell title={businessName ?? 'Mi Comercio'} className="space-y-6">
+        <Suspense fallback={null}>
+          <MpCallbackHandler setOauthSuccess={setOauthSuccess} setOauthError={setOauthError} />
+        </Suspense>
 
         {/* Banner onboarding — visible si el usuario no tiene comercio aún */}
         {!businessId && (
