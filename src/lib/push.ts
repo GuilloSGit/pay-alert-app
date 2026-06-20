@@ -40,7 +40,21 @@ export async function registerPushIfPermitted(): Promise<void> {
     const fcmToken = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg })
     if (!fcmToken) return
 
-    const deviceName = navigator.userAgent.includes('Mobile') ? 'Móvil Web' : 'Escritorio Web'
+    const ua = navigator.userAgent
+    let browser = 'Navegador'
+    if (ua.includes('Edg/')) browser = 'Edge'
+    else if (ua.includes('OPR/') || ua.includes('Opera')) browser = 'Opera'
+    else if (ua.includes('SamsungBrowser/')) browser = 'Samsung'
+    else if (ua.includes('Chrome/') && !ua.includes('Chromium/')) browser = 'Chrome'
+    else if (ua.includes('Firefox/')) browser = 'Firefox'
+    else if (ua.includes('Safari/') && !ua.includes('Chrome/')) browser = 'Safari'
+    let os = 'Web'
+    if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS'
+    else if (/Android/.test(ua)) os = 'Android'
+    else if (/Mac OS X/.test(ua)) os = 'macOS'
+    else if (/Windows NT/.test(ua)) os = 'Windows'
+    else if (/Linux/.test(ua)) os = 'Linux'
+    const deviceName = `${browser} en ${os}`
 
     await api.post('/api/v1/users/me/devices', {
       fcmToken,
