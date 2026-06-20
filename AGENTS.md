@@ -367,6 +367,22 @@ const ALLOWED_RETURN_PATHS = ['/dashboard/settings', '/onboarding', '/dashboard/
 Si se agrega una nueva página que debe recibir `?mp=connected` al volver, agregar aquí.
 Los params se leen con `useSearchParams()` y se limpian con `router.replace(pathname)` para no quedar en la URL.
 
+**Gotcha Next.js — Suspense boundary:**  
+`useSearchParams()` en un componente `'use client'` fuerza un CSR bailout si no está envuelto en `<Suspense>`. Next.js lo detecta en build y falla el export. Patrón correcto:
+```tsx
+// Extraer la lógica con useSearchParams a un sub-componente
+function MpCallbackHandler({ setFoo, setBar }) {
+  const searchParams = useSearchParams()
+  // ... lógica
+  return null
+}
+// Y en el componente padre, envolverlo:
+<Suspense fallback={null}>
+  <MpCallbackHandler setFoo={setFoo} setBar={setBar} />
+</Suspense>
+```
+Aplicado en `businesses/page.tsx` (sesión 34).
+
 ## Roadmap FE — pendientes (estado 2026-06-20)
 
 ### ✅ Completados esta sesión (sesión 9 — 2026-06-17)
