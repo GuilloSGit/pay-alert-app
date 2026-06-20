@@ -296,6 +296,15 @@ function Step3({
   const [selected, setSelected] = useState(initialPlan ?? 'basic')
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isActive, setIsActive] = useState(false)
+
+  useEffect(() => {
+    // Verificar si ya tiene plan activo antes de mostrar el picker
+    api
+      .get<ApiResponse<{ status: string }>>(`/api/v1/businesses/${businessId}/subscription`)
+      .then((r) => { if (r.data.status === 'ACTIVE') setIsActive(true) })
+      .catch(() => {})
+  }, [businessId])
 
   useEffect(() => {
     api
@@ -329,6 +338,29 @@ function Step3({
   }
 
   const selectedPlan = plans.find((p) => p.slug === selected)
+
+  if (isActive) {
+    return (
+      <div className="space-y-5 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+          <svg className="h-7 w-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">¡Ya tenés un plan activo!</h2>
+          <p className="mt-1 text-sm text-gray-500">Tu suscripción está funcionando. Podés ir al dashboard.</p>
+        </div>
+        <button
+          type="button"
+          onClick={onDone}
+          className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          Ir al dashboard →
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
