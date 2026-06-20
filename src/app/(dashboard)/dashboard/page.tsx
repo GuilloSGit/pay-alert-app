@@ -8,6 +8,7 @@ import { StatCard } from '@/components/ui/StatCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { NoMpConnectionBanner } from '@/components/ui/NoMpConnectionBanner'
 import { api } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
 import type { Payment } from '@/types'
@@ -82,6 +83,7 @@ export default function DashboardPage() {
 
   return (
     <PageShell title="Dashboard">
+      <NoMpConnectionBanner />
 
       {/* Stats cards */}
       <div className={`grid gap-4 mb-6 ${isManager ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2'}`}>

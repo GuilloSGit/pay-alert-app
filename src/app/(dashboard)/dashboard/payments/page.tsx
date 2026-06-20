@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { NoMpConnectionBanner } from '@/components/ui/NoMpConnectionBanner'
 import { SlideOver } from '@/components/ui/SlideOver'
 import { api } from '@/lib/api'
 import { getUser } from '@/lib/auth'
@@ -353,6 +354,7 @@ export default function PaymentsPage() {
 
   return (
     <PageShell title="Pagos">
+      <NoMpConnectionBanner />
 
       {/* Encabezado de sección */}
       <div className="mb-6 flex items-start justify-between gap-4">
