@@ -38,7 +38,8 @@ export function AlertasSection() {
       api
         .get<ApiResponse<NotificationRule | null>>(`/api/v1/businesses/${businessId}/notification-rules`)
         .then((r) => r.data),
-    enabled: !!businessId && !!subscription?.plan.alertByAmount,
+    enabled: !!businessId && !!subscription?.plan.alertByAmount && canEdit,
+    retry: false,
   })
 
   const { data: user, isLoading: isLoadingUser } = useQuery({
