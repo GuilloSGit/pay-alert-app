@@ -44,7 +44,7 @@ export default function SettingsPage() {
         )}
 
         <AlertasSection />
-        <CierresEmailSection />
+        {isAdmin && <CierresEmailSection />}
         <ProfileSection />
         <SecuritySection />
 
