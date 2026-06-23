@@ -1,3 +1,4 @@
+import { tryGetPushCredentials, getDeviceName } from './push'
 import { api, ApiError } from './api'
 
 function computeFingerprint(): string {
@@ -27,26 +28,23 @@ export type RegisterDeviceError =
   | { type: 'DEVICE_LIMIT_REACHED'; currentDevice: DeviceLimitInfo | null }
   | { type: 'ERROR' }
 
+// Registra el dispositivo con credenciales push incluidas en una sola llamada a la API.
+// Pedir permiso de notificaciones y registrar el device son el mismo paso para evitar
+// consumir el slot del límite de dispositivos con un device sin push.
 export async function registerDevice(
   opts: { force?: boolean } = {},
 ): Promise<RegisterDeviceResult | RegisterDeviceError> {
   const fingerprint = computeFingerprint()
+  const deviceName = getDeviceName()
 
-  let fcmToken: string | undefined
-  try {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      // Firebase messaging token — se obtiene desde el hook que llama a este helper
-      // Si no está disponible, se registra sin push (solo fingerprint + WebSocket)
-    }
-  } catch {
-    // push no disponible en este entorno
-  }
+  const pushCreds = await tryGetPushCredentials()
 
   try {
     await api.post('/api/v1/users/me/devices', {
       platform: 'web',
       fingerprint,
-      ...(fcmToken ? { fcmToken } : {}),
+      deviceName,
+      ...(pushCreds ?? {}),
       ...(opts.force ? { force: true } : {}),
     })
     return { ok: true, replaced: opts.force }

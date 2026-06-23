@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Ca
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api } from '@/lib/api'
-import { registerPushIfPermitted } from '@/lib/push'
+import { registerDevice } from '@/lib/device'
 import { type Device, PLATFORM_LABELS, formatRelative, formatDate } from './types'
 
 // BeforeInstallPromptEvent no está en los tipos estándar de TypeScript
@@ -136,7 +136,7 @@ export function DevicesSection() {
 
   async function handleActivatePush() {
     setIsActivatingPush(true)
-    await registerPushIfPermitted()
+    await registerDevice()
     if ('Notification' in window) setPushPermission(Notification.permission)
     void queryClient.invalidateQueries({ queryKey: ['devices'] })
     setIsActivatingPush(false)

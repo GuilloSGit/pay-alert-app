@@ -1,6 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getMessaging, getToken } from 'firebase/messaging'
-import { api } from './api'
 
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyCnWfg9Hpl8YPplqoTZcnQ3nSQ_zrHqNgE',
@@ -11,33 +10,18 @@ const FIREBASE_CONFIG = {
   appId: '1:654503153960:web:bd909e44f0e6525b42c01d',
 }
 
-// Clave VAPID de Firebase — para getToken() en Chrome/Firefox/Edge
 const FCM_VAPID_KEY = 'BJvpLdPRrCT8wz1M2X-JHBb0FSe4vl4OwV-fBBV-KWc-KJ6ovGZo3LHSG8FqN-WpOOSGOH1xEmjX2SaYfDyXAgo'
-
-// Clave VAPID propia — para PushManager.subscribe() en Safari
 const WEB_PUSH_VAPID_PUBLIC_KEY = 'BNtclkmNlurhzIBMesLcMspELLi3zzwDjyEwz0eqdMk3Ms2aif3_ZqF9khgDMl4xVzjDRUoJKch5nSch90OopDc'
-
-function getFingerprint(): string {
-  const parts = [
-    navigator.userAgent,
-    `${screen.width}x${screen.height}`,
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-  ]
-  return btoa(parts.join('|'))
-}
 
 function getFirebaseApp() {
   return getApps().length ? getApps()[0]! : initializeApp(FIREBASE_CONFIG)
 }
 
-// Safari (macOS y iOS) no soporta el SDK de Firebase Messaging.
-// Detectamos por la ausencia de Chrome/Firefox/Edge en el UA.
 function isSafari(): boolean {
   const ua = navigator.userAgent
   return /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|OPR|Edg|SamsungBrowser/i.test(ua)
 }
 
-// Convierte una VAPID public key en base64url al Uint8Array que espera PushManager.subscribe()
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -47,7 +31,7 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return arr.buffer
 }
 
-function getDeviceName(): string {
+export function getDeviceName(): string {
   const ua = navigator.userAgent
   let browser = 'Navegador'
   if (ua.includes('Edg/')) browser = 'Edge'
@@ -65,53 +49,47 @@ function getDeviceName(): string {
   return `${browser} en ${os}`
 }
 
-export async function registerPushIfPermitted(): Promise<void> {
-  if (typeof window === 'undefined') return
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return
-  if (Notification.permission === 'denied') return
+export type PushCredentials =
+  | { fcmToken: string; webPushSubscription?: undefined }
+  | { webPushSubscription: { endpoint: string; p256dh: string; auth: string }; fcmToken?: undefined }
+  | null
+
+// Obtiene las credenciales push del browser sin llamar a la API.
+// Pide permiso si aún no fue decidido. Retorna null si no hay push disponible.
+export async function tryGetPushCredentials(): Promise<PushCredentials> {
+  if (typeof window === 'undefined') return null
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return null
+  if (Notification.permission === 'denied') return null
 
   try {
     const permission = await Notification.requestPermission()
-    if (permission !== 'granted') return
+    if (permission !== 'granted') return null
 
     const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    const deviceName = getDeviceName()
-    const fingerprint = getFingerprint()
 
     if (isSafari()) {
-      // Safari: Web Push nativo con VAPID propio
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(WEB_PUSH_VAPID_PUBLIC_KEY),
       })
       const key = sub.getKey('p256dh')
       const auth = sub.getKey('auth')
-      if (!key || !auth) return
+      if (!key || !auth) return null
 
-      await api.post('/api/v1/users/me/devices', {
+      return {
         webPushSubscription: {
           endpoint: sub.endpoint,
           p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
           auth: btoa(String.fromCharCode(...new Uint8Array(auth))),
         },
-        platform: 'web',
-        deviceName,
-        fingerprint,
-      })
+      }
     } else {
-      // Chrome / Firefox / Edge: FCM con getToken()
       const messaging = getMessaging(getFirebaseApp())
       const fcmToken = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg })
-      if (!fcmToken) return
-
-      await api.post('/api/v1/users/me/devices', {
-        fcmToken,
-        platform: 'web',
-        deviceName,
-        fingerprint,
-      })
+      if (!fcmToken) return null
+      return { fcmToken }
     }
   } catch {
-    // Silencioso: permiso denegado, navegador sin soporte, o error de red
+    return null
   }
 }
