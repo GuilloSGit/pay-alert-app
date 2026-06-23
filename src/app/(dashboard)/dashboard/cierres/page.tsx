@@ -310,7 +310,7 @@ export default function CierresPage() {
 
           {!hasClosures ? (
             <ClosureTable days={BLUR_ROWS} blur />
-          ) : closuresLoading ? (
+          ) : closuresData === undefined ? (
             <div className="flex h-48 items-center justify-center">
               <Spinner />
             </div>

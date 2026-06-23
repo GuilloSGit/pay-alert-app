@@ -53,6 +53,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     })
     void queryClient.refetchQueries({ queryKey: ['summary'], type: 'active' })
     void queryClient.refetchQueries({ queryKey: ['payments'], type: 'active' })
+    void queryClient.refetchQueries({ queryKey: ['closures'], type: 'active' })
   }, [queryClient])
 
   const dismissToast = useCallback((id: number) => {
