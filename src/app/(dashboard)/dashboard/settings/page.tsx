@@ -12,6 +12,7 @@ import { ProfileSection } from './_sections/ProfileSection'
 import { SecuritySection } from './_sections/SecuritySection'
 import { DevicesSection } from './_sections/DevicesSection'
 import { QuietHoursSection } from './_sections/QuietHoursSection'
+import { RolesSection } from './_sections/RolesSection'
 
 export default function SettingsPage() {
   const { role } = useActiveBusiness()
@@ -45,6 +46,7 @@ export default function SettingsPage() {
 
         <AlertasSection />
         {isAdmin && <CierresEmailSection />}
+        {isAdmin && <RolesSection />}
         <ProfileSection />
         <SecuritySection />
 
