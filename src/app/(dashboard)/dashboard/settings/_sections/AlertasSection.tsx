@@ -17,10 +17,14 @@ interface UserProfile {
   pushEnabled: boolean
 }
 
+interface BusinessPermissions {
+  memberCanConfigureAlerts: boolean
+}
+
 export function AlertasSection() {
   const { businessId, role } = useActiveBusiness()
   const queryClient = useQueryClient()
-  const canEdit = role === 'OWNER' || role === 'ADMIN'
+  const isAdminRole = role === 'OWNER' || role === 'ADMIN'
 
   const { data: subscription, isLoading: isLoadingSub } = useQuery({
     queryKey: ['subscription-alertas', businessId],
@@ -31,6 +35,19 @@ export function AlertasSection() {
     enabled: !!businessId,
     staleTime: 5 * 60 * 1000,
   })
+
+  const { data: perms, isLoading: isLoadingPerms } = useQuery({
+    queryKey: ['business-permissions', businessId],
+    queryFn: () =>
+      api
+        .get<ApiResponse<BusinessPermissions>>(`/api/v1/businesses/${businessId}/permissions`)
+        .then((r) => r.data),
+    enabled: !!businessId && role === 'MEMBER',
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const canEdit = isAdminRole || (role === 'MEMBER' && (perms?.memberCanConfigureAlerts ?? false))
 
   const { data: rule, isLoading: isLoadingRule } = useQuery({
     queryKey: ['notification-rules', businessId],
@@ -63,7 +80,7 @@ export function AlertasSection() {
   }
 
   const hasAlertByAmount = !!subscription?.plan.alertByAmount
-  const isLoading = isLoadingSub || (hasAlertByAmount && isLoadingRule) || isLoadingUser
+  const isLoading = isLoadingSub || (role === 'MEMBER' && isLoadingPerms) || (hasAlertByAmount && isLoadingRule) || isLoadingUser
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
