@@ -265,14 +265,21 @@ Las páginas consumen `useActiveBusiness()` — no llaman a `/businesses` ni `/s
 
 ### Push notifications — flujo de permiso
 
-`registerPushIfPermitted()` en `src/lib/push.ts` pide permiso al browser, registra el SW de FCM y hace POST a `/users/me/devices`.
+`src/lib/push.ts` exporta `tryGetPushCredentials()` — obtiene FCM token (Chrome/Firefox/Edge) o Web Push sub (Safari) sin llamar a la API. También exporta `getDeviceName()`.
 
-**Regla (sesión 32 — actualizada):** `registerPushIfPermitted()` se llama automáticamente desde `DashboardShell` al montar (junto con `registerDevice()`). No espera un click del usuario. La primera vez que el usuario entra al dashboard, el browser muestra el popup de permiso. Esto es deseable: sin MP conectado ni notificaciones configuradas, Pay Alert no sirve de nada. También se llama desde `DevicesSection` para refrescar el estado.
+`src/lib/device.ts` — `registerDevice()` es el único punto de entrada. Llama a `tryGetPushCredentials()` internamente y envía todo en un solo `POST /users/me/devices`. `registerPushIfPermitted()` fue eliminado.
+
+**Regla (sesión 37 — definitiva):** `registerDevice()` se llama desde `DashboardShell` al montar. Pide permiso push e incluye las credenciales en la misma llamada. No hay una segunda llamada separada. `DevicesSection.handleActivatePush()` también llama `registerDevice()`.
+
+**Por qué es una sola llamada (bug crítico resuelto sesión 37):** si se hacen dos llamadas con fingerprints distintos, la primera consume el slot del límite (no-OWNER = 1 device). La segunda recibe 409 silencioso → ADMIN/MEMBER jamás reciben push. Una sola llamada evita consumir el slot con un device sin push.
 
 `DevicesSection` lee `Notification.permission` con `useState` lazy (no `useEffect`) y muestra un banner si `!== 'granted'`.
 
-**Device names (sesión 35):** `push.ts` detecta browser + OS del userAgent y construye `deviceName = "${browser} en ${os}"` antes de registrar el dispositivo. Si `Notification.permission === 'granted'`, el banner "Activar" no aparece — eso es correcto. Para testar push en producción sin pago real de MP: `curl -X POST https://pay-alert-api.onrender.com/api/v1/admin/test-notification/<businessId> -H "x-admin-api-key: <ADMIN_API_KEY>"`
-- **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries.
+**Device names:** `push.ts` detecta browser + OS del userAgent (`getDeviceName()`). Si `Notification.permission === 'granted'`, el banner "Activar" no aparece — eso es correcto.
+
+Para testar push en producción sin pago real de MP: `curl -X POST https://pay-alert-api.onrender.com/api/v1/admin/test-notification/<businessId> -H "x-admin-api-key: <ADMIN_API_KEY>"`
+
+- **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries (`summary`, `payments`, `closures`).
 
 ### Jerarquía de roles
 
