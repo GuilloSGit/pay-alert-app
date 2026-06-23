@@ -209,7 +209,18 @@ export function DevicesSection() {
           <span className="text-sm text-muted">Cargando...</span>
         </div>
       ) : !devices || devices.length === 0 ? (
-        <p className="text-sm text-muted">No tenés dispositivos vinculados.</p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted">No tenés dispositivos vinculados.</p>
+          {pushPermission === 'granted' && (
+            <button
+              onClick={handleActivatePush}
+              disabled={isActivatingPush}
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+            >
+              {isActivatingPush ? 'Vinculando...' : 'Vincular este dispositivo'}
+            </button>
+          )}
+        </div>
       ) : (
         <ul className="divide-y divide-border">
           {devices.map((d) => (
