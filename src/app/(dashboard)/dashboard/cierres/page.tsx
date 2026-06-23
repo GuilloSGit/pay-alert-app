@@ -24,6 +24,8 @@ interface ClosureDay {
 
 interface SubscriptionPlan {
   closures: boolean
+  dataExport: boolean
+  historyDays: number
   name: string
   slug: Plan['slug']
 }
@@ -48,6 +50,38 @@ function formatMethod(method: string | null) {
 
 function formatAmount(amount: string) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(amount))
+}
+
+function minDateForPlan(historyDays: number): string {
+  if (historyDays === -1) return ''
+  const d = new Date()
+  d.setDate(d.getDate() - historyDays)
+  return d.toISOString().split('T')[0]
+}
+
+function exportClosuresCsv(days: ClosureDay[]) {
+  const LABELS: Record<string, string> = {
+    money_transfer: 'Transferencia', regular_payment: 'QR / Cobro', account_money: 'Cuenta MP',
+    debit_card: 'Tarjeta débito', credit_card: 'Tarjeta crédito', bank_transfer: 'Transferencia bancaria',
+    ticket: 'Cupón / Efectivo', atm: 'ATM', digital_currency: 'Billetera virtual', prepaid_card: 'Tarjeta prepago',
+  }
+  function esc(v: string) { return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v }
+  const rows = [
+    'Fecha,Método de pago,Pagos,Total ARS',
+    ...days.flatMap((day) =>
+      day.methods.map((m) =>
+        [day.date, LABELS[m.method ?? ''] ?? m.method ?? 'Sin método', m.count, Number(m.totalAmount).toFixed(2)]
+          .map(String).map(esc).join(','),
+      ),
+    ),
+  ]
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `cierres-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 function formatDate(dateStr: string) {
@@ -235,6 +269,9 @@ export default function CierresPage() {
 
   const planFeatures = subData?.plan
   const hasClosures = planFeatures?.closures === true
+  const hasExport = planFeatures?.dataExport === true
+  const historyDays = planFeatures?.historyDays ?? 30
+  const minDate = hasClosures ? minDateForPlan(historyDays) : ''
 
   const fromISO = from ? `${from}T00:00:00.000-03:00` : undefined
   const toISO = to ? `${to}T23:59:59.999-03:00` : undefined
@@ -270,13 +307,15 @@ export default function CierresPage() {
     <PageShell title="Cierres">
       <div className="space-y-6">
 
-        {/* Filtros de fecha */}
+        {/* Filtros de fecha + botón export */}
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted">Desde</label>
             <input
               type="date"
               value={from}
+              min={minDate}
+              max={to || new Date().toISOString().split('T')[0]}
               onChange={(e) => setFrom(e.target.value)}
               disabled={!hasClosures}
               className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -287,6 +326,8 @@ export default function CierresPage() {
             <input
               type="date"
               value={to}
+              min={minDate}
+              max={new Date().toISOString().split('T')[0]}
               onChange={(e) => setTo(e.target.value)}
               disabled={!hasClosures}
               className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -300,7 +341,48 @@ export default function CierresPage() {
               Limpiar
             </button>
           )}
+
+          <div className="ml-auto">
+            {hasExport ? (
+              <button
+                onClick={() => days.length > 0 && exportClosuresCsv(days)}
+                disabled={days.length === 0 || !hasClosures}
+                className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Exportar CSV
+              </button>
+            ) : (
+              <div className="relative group">
+                <button
+                  disabled
+                  className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Exportar CSV
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                    Profesional
+                  </span>
+                </button>
+                <div className="absolute right-0 top-full z-50 mt-2 hidden w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg group-hover:block">
+                  <p className="text-xs font-medium text-foreground">Disponible en Plan Profesional</p>
+                  <p className="mt-0.5 text-xs text-muted">Exportá tus cierres en CSV.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Nota de límite de historial según plan */}
+        {hasClosures && historyDays !== -1 && (
+          <p className="text-xs text-muted">
+            Tu plan permite ver hasta <strong>{historyDays} días</strong> de historial.
+          </p>
+        )}
 
         {/* Contenido */}
         <div className="relative">
