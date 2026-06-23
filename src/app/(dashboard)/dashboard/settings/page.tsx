@@ -38,8 +38,16 @@ export default function SettingsPage() {
         <CierresEmailSection />
         <ProfileSection />
         <SecuritySection />
-        <DevicesSection />
-        <QuietHoursSection />
+
+        {/* Notificaciones */}
+        <div className="space-y-4">
+          <div className="border-b border-border pb-2">
+            <h2 className="text-base font-semibold text-foreground">Notificaciones</h2>
+            <p className="text-xs text-muted">Push a dispositivos y horario silencioso.</p>
+          </div>
+          <DevicesSection />
+          <QuietHoursSection />
+        </div>
       </div>
     </PageShell>
   )
