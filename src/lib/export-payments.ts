@@ -253,6 +253,75 @@ export async function downloadPdf(
   doc.save(filename)
 }
 
+// ── PDF Cierres ───────────────────────────────────────────────────────────────
+
+const CIERRE_HEADERS = ['Fecha', 'Método de pago', 'Pagos', 'Total ARS']
+
+export async function downloadCierresPdf(
+  rows: string[][],
+  filename: string,
+  businessName: string,
+  userName: string,
+) {
+  const { default: jsPDF } = await import('jspdf')
+  const { default: autoTable } = await import('jspdf-autotable')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+  const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+
+  doc.setFillColor(5, 150, 105)
+  doc.rect(0, 0, 210, 18, 'F')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.setTextColor(255, 255, 255)
+  doc.text('Pay Alert', 10, 12)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.text('Cierres diarios', 38, 12)
+
+  doc.setTextColor(30, 30, 30)
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.text(businessName, 10, 28)
+
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(100, 116, 139)
+  doc.text(`Exportado por ${userName}`, 10, 34)
+  doc.text(`${dateStr} · ${timeStr}`, 10, 39)
+
+  const dataRows = rows.length > 1 ? rows.slice(1) : []
+  doc.text(`${dataRows.length} registro${dataRows.length !== 1 ? 's' : ''}`, 10, 44)
+
+  autoTable(doc, {
+    head: [CIERRE_HEADERS],
+    body: dataRows,
+    startY: 50,
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 250, 249] },
+    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } },
+    margin: { left: 10, right: 10 },
+  })
+
+  const totalPages = doc.getNumberOfPages()
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(7)
+    doc.setTextColor(150)
+    doc.text(`Página ${i} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' })
+  }
+
+  doc.save(filename)
+}
+
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function triggerDownload(url: string, filename: string) {

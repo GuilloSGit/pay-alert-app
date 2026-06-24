@@ -15,8 +15,10 @@ import { useActiveBusiness } from '@/lib/business-context'
 import { ExportDropdown } from '@/components/ui/ExportDropdown'
 import type { Payment, ApiResponse } from '@/types'
 
-interface PlanFeatures {
-  dataExport: boolean
+interface SubscriptionData {
+  status: string
+  trialEndsAt: string | null
+  plan: { dataExport: boolean }
 }
 
 interface PaymentsResponse {
@@ -259,15 +261,16 @@ export default function PaymentsPage() {
   const [q, setQ] = useState('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { data: planFeatures } = useQuery({
+  const { data: subData } = useQuery({
     queryKey: ['subscription-features', businessId],
     queryFn: () =>
       api
-        .get<ApiResponse<{ plan: PlanFeatures }>>(`/api/v1/businesses/${businessId}/subscription`)
-        .then((r) => r.data.plan),
+        .get<ApiResponse<SubscriptionData>>(`/api/v1/businesses/${businessId}/subscription`)
+        .then((r) => r.data),
     enabled: !!businessId,
     staleTime: 5 * 60 * 1000,
   })
+  const planFeatures = subData?.plan
 
   const buildParams = useCallback(
     (cursor?: string) => {

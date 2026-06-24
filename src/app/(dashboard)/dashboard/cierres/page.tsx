@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { PageShell } from '@/components/layout/PageShell'
 import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { api } from '@/lib/api'
 import { useActiveBusiness } from '@/lib/business-context'
+import { downloadXlsx, downloadCierresPdf, downloadCsvBlob } from '@/lib/export-payments'
+import { getUser } from '@/lib/auth'
 import type { Plan } from '@/types'
 
 interface ClosureMethod {
@@ -59,29 +61,137 @@ function minDateForPlan(historyDays: number): string {
   return d.toISOString().split('T')[0]
 }
 
-function exportClosuresCsv(days: ClosureDay[]) {
-  const LABELS: Record<string, string> = {
-    money_transfer: 'Transferencia', regular_payment: 'QR / Cobro', account_money: 'Cuenta MP',
-    debit_card: 'Tarjeta débito', credit_card: 'Tarjeta crédito', bank_transfer: 'Transferencia bancaria',
-    ticket: 'Cupón / Efectivo', atm: 'ATM', digital_currency: 'Billetera virtual', prepaid_card: 'Tarjeta prepago',
-  }
+const METHOD_LABELS: Record<string, string> = {
+  money_transfer: 'Transferencia', regular_payment: 'QR / Cobro', account_money: 'Cuenta MP',
+  debit_card: 'Tarjeta débito', credit_card: 'Tarjeta crédito', bank_transfer: 'Transferencia bancaria',
+  ticket: 'Cupón / Efectivo', atm: 'ATM', digital_currency: 'Billetera virtual', prepaid_card: 'Tarjeta prepago',
+}
+
+function buildCierresRows(days: ClosureDay[]): string[][] {
   function esc(v: string) { return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v }
-  const rows = [
-    'Fecha,Método de pago,Pagos,Total ARS',
+  return [
+    ['Fecha', 'Método de pago', 'Pagos', 'Total ARS'],
     ...days.flatMap((day) =>
-      day.methods.map((m) =>
-        [day.date, LABELS[m.method ?? ''] ?? m.method ?? 'Sin método', m.count, Number(m.totalAmount).toFixed(2)]
-          .map(String).map(esc).join(','),
-      ),
+      day.methods.map((m) => [
+        day.date,
+        METHOD_LABELS[m.method ?? ''] ?? m.method ?? 'Sin método',
+        String(m.count),
+        Number(m.totalAmount).toFixed(2),
+      ].map(esc)),
     ),
   ]
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `cierres-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+}
+
+type ExportFormat = 'csv' | 'xlsx' | 'pdf'
+
+function CierresExportDropdown({ days, businessName, disabled }: { days: ClosureDay[]; businessName: string; disabled?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState<ExportFormat | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  async function handleExport(format: ExportFormat) {
+    setOpen(false)
+    setLoading(format)
+    setError(null)
+    try {
+      const rows = buildCierresRows(days)
+      const date = new Date().toISOString().slice(0, 10)
+      if (format === 'csv') {
+        const csvText = rows.map((r) => r.join(',')).join('\n')
+        downloadCsvBlob(csvText, `cierres-${date}.csv`)
+      } else if (format === 'xlsx') {
+        downloadXlsx(rows, `cierres-${date}.xlsx`, businessName)
+      } else {
+        const user = getUser()
+        await downloadCierresPdf(rows, `cierres-${date}.pdf`, businessName, user?.name ?? '')
+      }
+    } catch {
+      setError('No se pudo exportar. Intentá de nuevo.')
+      setTimeout(() => setError(null), 4000)
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  if (disabled) {
+    return (
+      <div className="relative">
+        <button
+          disabled
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Exportar
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Profesional</span>
+        </button>
+        {showTooltip && (
+          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg">
+            <p className="text-xs font-medium text-foreground">Disponible en Plan Profesional</p>
+            <p className="mt-0.5 text-xs text-muted">Exportá tus cierres en CSV, Excel o PDF.</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const isLoading = loading !== null
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => !isLoading && days.length > 0 && setOpen((o) => !o)}
+        disabled={isLoading || days.length === 0}
+        className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {isLoading ? (
+          <><Spinner size="sm" />Exportando...</>
+        ) : (
+          <>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Exportar
+            <svg className={`h-3.5 w-3.5 text-muted transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </>
+        )}
+      </button>
+      {error && (
+        <p className="absolute right-0 top-full mt-1 w-64 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+      )}
+      {open && !isLoading && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-60 rounded-xl border border-border bg-card shadow-lg">
+          <p className="border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted">Formato</p>
+          {([
+            { format: 'csv' as const, label: 'CSV', desc: 'Compatible con Excel, Sheets y más' },
+            { format: 'xlsx' as const, label: 'Excel (XLSX)', desc: 'Libro de Excel con hoja de info' },
+            { format: 'pdf' as const, label: 'PDF empresarial', desc: 'Con membrete, comercio y fecha' },
+          ]).map(({ format, label, desc }) => (
+            <button key={format} onClick={() => handleExport(format)}
+              className="flex w-full flex-col px-4 py-3 text-left transition-colors hover:bg-surface first-of-type:rounded-t-xl last-of-type:rounded-b-xl">
+              <span className="text-sm font-medium text-foreground">{label}</span>
+              <span className="text-xs text-muted">{desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function formatDate(dateStr: string) {
@@ -250,7 +360,7 @@ function ClosureTable({ days, blur }: { days: ClosureDay[]; blur?: boolean }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CierresPage() {
-  const { businessId } = useActiveBusiness()
+  const { businessId, businessName } = useActiveBusiness()
 
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -343,37 +453,11 @@ export default function CierresPage() {
           )}
 
           <div className="ml-auto">
-            {hasExport ? (
-              <button
-                onClick={() => days.length > 0 && exportClosuresCsv(days)}
-                disabled={days.length === 0 || !hasClosures}
-                className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Exportar CSV
-              </button>
-            ) : (
-              <div className="relative group">
-                <button
-                  disabled
-                  className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Exportar CSV
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                    Profesional
-                  </span>
-                </button>
-                <div className="absolute right-0 top-full z-50 mt-2 hidden w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg group-hover:block">
-                  <p className="text-xs font-medium text-foreground">Disponible en Plan Profesional</p>
-                  <p className="mt-0.5 text-xs text-muted">Exportá tus cierres en CSV.</p>
-                </div>
-              </div>
-            )}
+            <CierresExportDropdown
+              days={days}
+              businessName={businessName ?? ''}
+              disabled={!hasExport}
+            />
           </div>
         </div>
 
