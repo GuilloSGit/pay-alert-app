@@ -84,7 +84,7 @@ function buildCierresRows(days: ClosureDay[]): string[][] {
 
 type ExportFormat = 'csv' | 'xlsx' | 'pdf'
 
-function CierresExportDropdown({ days, businessName, disabled }: { days: ClosureDay[]; businessName: string; disabled?: boolean }) {
+function CierresExportDropdown({ days, businessName, disabled, noPermission }: { days: ClosureDay[]; businessName: string; disabled?: boolean; noPermission?: boolean }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState<ExportFormat | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -121,6 +121,30 @@ function CierresExportDropdown({ days, businessName, disabled }: { days: Closure
     } finally {
       setLoading(null)
     }
+  }
+
+  if (noPermission) {
+    return (
+      <div className="relative">
+        <button
+          disabled
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Exportar
+        </button>
+        {showTooltip && (
+          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg">
+            <p className="text-xs font-medium text-foreground">Sin permiso para exportar</p>
+            <p className="mt-0.5 text-xs text-muted">Solo los miembros con rol MEMBER o superior pueden exportar cierres.</p>
+          </div>
+        )}
+      </div>
+    )
   }
 
   if (disabled) {
@@ -360,7 +384,7 @@ function ClosureTable({ days, blur }: { days: ClosureDay[]; blur?: boolean }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CierresPage() {
-  const { businessId, businessName } = useActiveBusiness()
+  const { businessId, businessName, role } = useActiveBusiness()
 
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -456,6 +480,7 @@ export default function CierresPage() {
             <CierresExportDropdown
               days={days}
               businessName={businessName ?? ''}
+              noPermission={role === 'OBSERVER'}
               disabled={!hasExport}
             />
           </div>
