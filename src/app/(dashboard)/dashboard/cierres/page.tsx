@@ -68,7 +68,6 @@ const METHOD_LABELS: Record<string, string> = {
 }
 
 function buildCierresRows(days: ClosureDay[]): string[][] {
-  function esc(v: string) { return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v }
   return [
     ['Fecha', 'Método de pago', 'Pagos', 'Total ARS'],
     ...days.flatMap((day) =>
@@ -77,9 +76,15 @@ function buildCierresRows(days: ClosureDay[]): string[][] {
         METHOD_LABELS[m.method ?? ''] ?? m.method ?? 'Sin método',
         String(m.count),
         Number(m.totalAmount).toFixed(2),
-      ].map(esc)),
+      ]),
     ),
   ]
+}
+
+function rowsToCsv(rows: string[][]): string {
+  return rows.map((r) =>
+    r.map((v) => (v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v)).join(',')
+  ).join('\n')
 }
 
 type ExportFormat = 'csv' | 'xlsx' | 'pdf'
@@ -99,28 +104,29 @@ function CierresExportDropdown({ days, businessName, disabled, noPermission }: {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  async function handleExport(format: ExportFormat) {
+  function handleExport(format: ExportFormat) {
     setOpen(false)
     setLoading(format)
     setError(null)
-    try {
-      const rows = buildCierresRows(days)
-      const date = new Date().toISOString().slice(0, 10)
+    const rows = buildCierresRows(days)
+    const date = new Date().toISOString().slice(0, 10)
+    const run = async () => {
       if (format === 'csv') {
-        const csvText = rows.map((r) => r.join(',')).join('\n')
-        downloadCsvBlob(csvText, `cierres-${date}.csv`)
+        downloadCsvBlob(rowsToCsv(rows), `cierres-${date}.csv`)
       } else if (format === 'xlsx') {
         downloadXlsx(rows, `cierres-${date}.xlsx`, businessName)
       } else {
         const user = getUser()
         await downloadCierresPdf(rows, `cierres-${date}.pdf`, businessName, user?.name ?? '')
       }
-    } catch {
-      setError('No se pudo exportar. Intentá de nuevo.')
-      setTimeout(() => setError(null), 4000)
-    } finally {
-      setLoading(null)
     }
+    run()
+      .catch((e) => {
+        console.error('[CierresExport] error:', e)
+        setError('No se pudo exportar. Intentá de nuevo.')
+        setTimeout(() => setError(null), 4000)
+      })
+      .finally(() => setLoading(null))
   }
 
   if (noPermission) {
