@@ -207,17 +207,29 @@ function CierresExportDropdown({ days, businessName, disabled, noPermission }: {
         <p className="absolute right-0 top-full mt-1 w-64 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
       )}
       {open && !isLoading && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-60 rounded-xl border border-border bg-card shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl border border-border bg-card shadow-lg">
           <p className="border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted">Formato</p>
           {([
-            { format: 'csv' as const, label: 'CSV', desc: 'Compatible con Excel, Sheets y más' },
-            { format: 'xlsx' as const, label: 'Excel (XLSX)', desc: 'Libro de Excel con hoja de info' },
-            { format: 'pdf' as const, label: 'PDF empresarial', desc: 'Con membrete, comercio y fecha' },
-          ]).map(({ format, label, desc }) => (
+            {
+              format: 'csv' as const, label: 'CSV', desc: 'Compatible con Excel, Sheets y más',
+              icon: <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+            },
+            {
+              format: 'xlsx' as const, label: 'Excel (XLSX)', desc: 'Libro de Excel con hoja de info',
+              icon: <svg className="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
+            },
+            {
+              format: 'pdf' as const, label: 'PDF empresarial', desc: 'Con membrete, comercio y fecha',
+              icon: <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+            },
+          ]).map(({ format, label, desc, icon }) => (
             <button key={format} onClick={() => handleExport(format)}
-              className="flex w-full flex-col px-4 py-3 text-left transition-colors hover:bg-surface first-of-type:rounded-t-xl last-of-type:rounded-b-xl">
-              <span className="text-sm font-medium text-foreground">{label}</span>
-              <span className="text-xs text-muted">{desc}</span>
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface first-of-type:rounded-t-xl last-of-type:rounded-b-xl">
+              <span className="shrink-0 text-muted">{icon}</span>
+              <span>
+                <span className="block text-sm font-medium text-foreground">{label}</span>
+                <span className="block text-xs text-muted">{desc}</span>
+              </span>
             </button>
           ))}
         </div>

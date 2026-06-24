@@ -250,7 +250,7 @@ export async function downloadPdf(
     doc.text(`Página ${i} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' })
   }
 
-  doc.save(filename)
+  triggerBlobDownload(doc.output('blob'), filename)
 }
 
 // ── PDF Cierres ───────────────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ export async function downloadCierresPdf(
     doc.text(`Página ${i} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' })
   }
 
-  doc.save(filename)
+  triggerBlobDownload(doc.output('blob'), filename)
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -335,4 +335,9 @@ function triggerDownload(url: string, filename: string) {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }, 1000)
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  triggerDownload(url, filename)
 }
