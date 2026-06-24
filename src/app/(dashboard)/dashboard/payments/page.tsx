@@ -369,7 +369,7 @@ export default function PaymentsPage() {
           <ExportDropdown
             businessId={businessId}
             businessName={businessName ?? 'Mi Comercio'}
-            fileStem="pagos"
+            filename={`pagos-${new Date().toISOString().slice(0, 10)}`}
             buildParams={buildParams}
             locked={planFeatures !== undefined && !planFeatures.dataExport}
           />

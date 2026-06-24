@@ -57,26 +57,18 @@ function buildCierresRows(days: ClosureDay[]): string[][] {
   ]
 }
 
-const METHOD_LABELS: Record<string, string> = {
-  money_transfer: 'Transferencia', regular_payment: 'QR / Cobro', account_money: 'Cuenta MP',
-  debit_card: 'Tarjeta débito', credit_card: 'Tarjeta crédito', bank_transfer: 'Transferencia bancaria',
-  ticket: 'Cupón / Efectivo', atm: 'ATM', digital_currency: 'Billetera virtual', prepaid_card: 'Tarjeta prepago',
+function buildExportFilename(from: string, to: string): string {
+  const fmt = (iso: string) =>
+    new Date(iso + 'T12:00:00')
+      .toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+      .replace(/\./g, '')
+      .replace(/\s+/g, '-')
+      .toLowerCase()
+  if (from && to) return `cierres-${fmt(from)}-a-${fmt(to)}`
+  if (from) return `cierres-desde-${fmt(from)}`
+  if (to) return `cierres-hasta-${fmt(to)}`
+  return `cierres-${new Date().toISOString().slice(0, 10)}`
 }
-
-function buildCierresRows(days: ClosureDay[]): string[][] {
-  return [
-    ['Fecha', 'Método de pago', 'Pagos', 'Total ARS'],
-    ...days.flatMap((day) =>
-      day.methods.map((m) => [
-        day.date,
-        METHOD_LABELS[m.method ?? ''] ?? m.method ?? 'Sin método',
-        String(m.count),
-        Number(m.totalAmount).toFixed(2),
-      ]),
-    ),
-  ]
-}
-
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr + 'T12:00:00Z')
@@ -339,7 +331,7 @@ export default function CierresPage() {
           <div className="ml-auto">
             <ExportDropdown
               businessName={businessName ?? ''}
-              fileStem="cierres"
+              filename={buildExportFilename(from, to)}
               rows={buildCierresRows(days)}
               pdfFn={downloadCierresPdf}
               noPermission={role === 'OBSERVER'}

@@ -13,7 +13,8 @@ import { getUser } from '@/lib/auth'
 
 interface Props {
   businessName: string
-  fileStem: string
+  /** Nombre del archivo sin extensión, ej: "cierres-06-dic-2025-a-15-may-2026" */
+  filename: string
   locked?: boolean
   noPermission?: boolean
   // Client-side: rows ya cargadas (ej: cierres)
@@ -59,7 +60,7 @@ const OPTIONS: { format: ExportFormat; label: string; desc: string; icon: React.
 
 export function ExportDropdown({
   businessName,
-  fileStem,
+  filename,
   locked = false,
   noPermission = false,
   rows: preloadedRows,
@@ -85,7 +86,6 @@ export function ExportDropdown({
     setOpen(false)
     setLoading(format)
     setError(null)
-    const date = new Date().toISOString().slice(0, 10)
     const run = async () => {
       const exportRows = preloadedRows
         ? preloadedRows
@@ -96,13 +96,13 @@ export function ExportDropdown({
             r.map((v) => (v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v)).join(','),
           )
           .join('\n')
-        downloadCsvBlob(csv, `${fileStem}-${date}.csv`)
+        downloadCsvBlob(csv, `${filename}.csv`)
       } else if (format === 'xlsx') {
-        downloadXlsx(exportRows, `${fileStem}-${date}.xlsx`, businessName)
+        downloadXlsx(exportRows, `${filename}.xlsx`, businessName)
       } else {
         const userName = getUser()?.name ?? ''
         const fn = pdfFn ?? downloadPdf
-        await fn(exportRows, `${fileStem}-${date}.pdf`, businessName, userName)
+        await fn(exportRows, `${filename}.pdf`, businessName, userName)
       }
     }
     run()
