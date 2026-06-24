@@ -42,6 +42,14 @@ const PERMISSIONS: PermissionRow[] = [
     observer: false,
   },
   {
+    label: 'Exportar cierres',
+    description: 'Puede descargar cierres en CSV, Excel o PDF (requiere plan Profesional)',
+    owner: 'fixed',
+    admin: 'fixed',
+    member: 'fixed',
+    observer: false,
+  },
+  {
     label: 'Recibir email de cierre',
     description: 'Recibe el resumen de pagos nocturno por email',
     owner: 'fixed',

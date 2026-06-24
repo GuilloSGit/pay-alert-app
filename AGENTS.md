@@ -306,6 +306,30 @@ OWNER > ADMIN > MEMBER > OBSERVER
 
 El backend valida el rol en cada endpoint. El sidebar filtra ítems por `roles[]` en `NAV_ITEMS`.
 
+#### Permisos por rol (client-side gates)
+
+| Acción | OWNER | ADMIN | MEMBER | OBSERVER |
+|--------|-------|-------|--------|----------|
+| Ver pagos | ✅ | ✅ | ✅ | ✅ |
+| Ver cierres | ✅ | ✅ | ✅ | ✅¹ |
+| **Exportar cierres** | ✅ | ✅ | ✅ | ❌ siempre |
+| Exportar pagos | ✅ | ✅ | ✅ | ✅¹ |
+| Recibir email de cierre | ✅ | ✅ | configurable² | ❌ |
+| Configurar alertas push | ✅ | ✅ | configurable² | ❌ |
+| Conectar/desconectar MP | ✅ | configurable³ | ❌ | ❌ |
+| Gestionar suscripción | ✅ | ❌ | ❌ | ❌ |
+| Invitar miembros | ✅ | ✅ | ❌ | ❌ |
+
+¹ OBSERVER puede ver si el Owner no lo restricts (sin toggle por ahora).
+² Toggle en `BusinessPermissions` — configurable por ADMIN en Settings → Roles.
+³ Toggle `adminCanConnectMP` en `BusinessPermissions`.
+
+**Gate de exportación:** requiere DOS condiciones:
+1. `plan.dataExport === true` (Profesional+) — badge "Profesional" si no tiene.
+2. `role !== 'OBSERVER'` — tooltip "Sin permiso" aunque el plan lo permita.
+
+Implementado en `CierresExportDropdown` (`cierres/page.tsx`, prop `noPermission`) y `ExportDropdown` (`ExportDropdown.tsx`).
+
 ---
 
 ## Deploy
