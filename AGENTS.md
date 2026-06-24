@@ -281,6 +281,23 @@ Para testar push en producción sin pago real de MP: `curl -X POST https://pay-a
 
 - **`WsMessage` union:** `WsPaymentMessage | WsMpTokenInvalidMessage`. El hook filtra mensajes: pasa `payment.*` y `mp.token_invalid`; descarta el resto. `DashboardShell.handleWsMessage` distingue: `mp.token_invalid` → `setMpTokenInvalid(true)`; `payment.*` → toast + refetch queries (`summary`, `payments`, `closures`).
 
+### Permisos granulares por rol (sesión 41)
+
+`GET/PUT /api/v1/businesses/:id/permissions` — solo ADMIN+. Campos: `memberCanReceiveClosures`, `memberCanConfigureAlerts`, `adminCanConnectMP`.
+
+`RolesSection.tsx` — matriz de permisos con toggles. Muestra checkmarks fijos para permisos no configurables. `queryKey: ['business-permissions', businessId]`.
+
+**`AlertasSection.tsx`:** si `role === 'MEMBER'`, fetchea perms con `enabled: role === 'MEMBER'`. `canEdit = isAdminRole || (role === 'MEMBER' && perms?.memberCanConfigureAlerts)`. Esto también controla si el backend acepta el request (BE verifica el permiso independientemente).
+
+**Settings page role-gating (`settings/page.tsx`):**
+- `isAdmin = role === 'OWNER' || role === 'ADMIN'`
+- Solo `isAdmin`: MpConnectSection, SubscriptionSection, asistente de configuración, CierresEmailSection, RolesSection
+- "Notificaciones" agrupa DevicesSection + QuietHoursSection (visible para todos)
+
+**Endpoints afectados por permisos:**
+- `notification-rules`: preHandler cambiado a `requireMembership('MEMBER')` + guard inline para MEMBER
+- `mp-connect` POST/DELETE/OAuth: preHandler `requireMembership('ADMIN')` + guard `checkMpConnectAllowed`
+
 ### Jerarquía de roles
 
 ```
