@@ -105,12 +105,14 @@ function CierresExportDropdown({ days, businessName, disabled, noPermission }: {
   }, [])
 
   function handleExport(format: ExportFormat) {
+    console.log('[CierresExport] called format=%s days=%d', format, days.length)
     setOpen(false)
     setLoading(format)
     setError(null)
     const rows = buildCierresRows(days)
     const date = new Date().toISOString().slice(0, 10)
     const run = async () => {
+      console.log('[CierresExport] run format=%s rows=%d', format, rows.length)
       if (format === 'csv') {
         downloadCsvBlob(rowsToCsv(rows), `cierres-${date}.csv`)
       } else if (format === 'xlsx') {
