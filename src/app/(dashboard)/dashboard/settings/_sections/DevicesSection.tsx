@@ -17,26 +17,28 @@ interface BeforeInstallPromptEvent extends Event {
 
 function InstallPwaBanner() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isIosNotInstalled, setIsIosNotInstalled] = useState(false)
+  const [isIosNotInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in navigator && (navigator as Record<string, unknown>).standalone === true)
+    if (isStandalone) return false
+    const ua = navigator.userAgent
+    const isIos = /iPhone|iPad|iPod/.test(ua)
+    return isIos && /Safari/i.test(ua) && !/CriOS|FxiOS/.test(ua)
+  })
   const [dismissed, setDismissed] = useState(false)
   const [installing, setInstalling] = useState(false)
   const promptRef = useRef<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
+    if (isIosNotInstalled) return
+
     // ¿Está corriendo como PWA instalada?
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       ('standalone' in navigator && (navigator as Record<string, unknown>).standalone === true)
     if (isStandalone) return
-
-    // iOS Safari: no hay evento de install, mostramos instrucciones manuales
-    const ua = navigator.userAgent
-    const isIos = /iPhone|iPad|iPod/.test(ua)
-    const isSafariIos = isIos && /Safari/i.test(ua) && !/CriOS|FxiOS/.test(ua)
-    if (isSafariIos) {
-      setIsIosNotInstalled(true)
-      return
-    }
 
     // Android / desktop Chrome: escuchar BeforeInstallPromptEvent
     const handler = (e: Event) => {
@@ -46,7 +48,7 @@ function InstallPwaBanner() {
     }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
+  }, [isIosNotInstalled])
 
   async function handleInstall() {
     if (!installPrompt) return
@@ -68,7 +70,7 @@ function InstallPwaBanner() {
           <svg className="inline h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z" />
           </svg>
-          ) y luego <strong>"Agregar a inicio"</strong> para recibir notificaciones cuando el browser esté cerrado.
+          ) y luego <strong>&ldquo;Agregar a inicio&rdquo;</strong> para recibir notificaciones cuando el browser esté cerrado.
         </p>
         <button onClick={() => setDismissed(true)} className="mt-2 text-xs text-emerald-600 underline">
           Entendido

@@ -11,8 +11,7 @@ test.describe('Dashboard', () => {
     await page.waitForTimeout(1_500)
 
     // Verificar al menos 3 cards numéricas (pago hoy, total mes, miembros)
-    const statCards = page.locator('[data-testid="stat-card"], .stat-card, [class*="StatCard"]')
-    // Fallback: buscar por contenido
+    // Buscar por contenido
     const paymentsToday = page.getByText(/pagos.*hoy|hoy.*pago/i).first()
     await expect(paymentsToday).toBeVisible({ timeout: 8_000 })
   })

@@ -1,5 +1,3 @@
-import { chromium } from '@playwright/test'
-
 export default async function globalSetup() {
   // Verificar que los servidores necesarios estén corriendo
   const services = [

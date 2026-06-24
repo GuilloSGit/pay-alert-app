@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -28,8 +28,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [businessName, setBusinessName] = useState<string | null>(null)
   const [role, setRole] = useState<BusinessRole | null>(null)
   const [businesses, setBusinesses] = useState<BusinessBrief[]>([])
-  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null)
-  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [subscriptionWarning, setSubscriptionWarning] = useState<string | null>(null)
   const businessIdRef = useRef<string | null>(null)
 
@@ -97,35 +95,45 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       .catch(() => {})
   }, [router])
 
-  useEffect(() => {
-    if (!businessId) return
-    let cancelled = false
-    api
-      .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null }>>(
-        `/api/v1/businesses/${businessId}/subscription`,
-      )
-      .then((res) => {
-        if (cancelled) return
-        setSubscriptionStatus(res.data.status)
-        setTrialEndsAt(res.data.trialEndsAt)
-      })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [businessId])
+  // Pre-warmea el cache de suscripción con el mismo queryKey que usan las páginas
+  // (CierresPage, etc.) para que lleguen con datos ya disponibles sin spinner extra.
+  const { data: subData } = useQuery({
+    queryKey: ['subscription-features', businessId],
+    queryFn: () =>
+      api
+        .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null; plan: unknown }>>(
+          `/api/v1/businesses/${businessId}/subscription`,
+        )
+        .then((r) => r.data),
+    enabled: !!businessId,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const subscriptionStatus = subData?.status ?? null
+  const trialEndsAt = subData?.trialEndsAt ?? null
 
   useEffect(() => {
     function onInactive() {
       const id = businessIdRef.current
       if (!id) return
-      api
-        .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null }>>(
-          `/api/v1/businesses/${id}/subscription`,
-        )
-        .then((res) => {
-          setSubscriptionStatus(res.data.status)
-          setTrialEndsAt(res.data.trialEndsAt)
+      void queryClient
+        .fetchQuery({
+          queryKey: ['subscription-features', id],
+          queryFn: () =>
+            api
+              .get<ApiResponse<{ status: SubscriptionStatus; trialEndsAt: string | null; plan: unknown }>>(
+                `/api/v1/businesses/${id}/subscription`,
+              )
+              .then((r) => r.data),
+          staleTime: 0,
         })
-        .catch(() => setSubscriptionStatus('SUSPENDED'))
+        .catch(() => {
+          queryClient.setQueryData(
+            ['subscription-features', id],
+            (old: { status: SubscriptionStatus; trialEndsAt: string | null; plan: unknown } | undefined) =>
+              old ? { ...old, status: 'SUSPENDED' as SubscriptionStatus } : old,
+          )
+        })
     }
     function onWarning(e: Event) {
       if (e instanceof CustomEvent) setSubscriptionWarning(e.detail as string)
@@ -136,7 +144,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       window.removeEventListener('subscription:inactive', onInactive)
       window.removeEventListener('subscription:warning', onWarning)
     }
-  }, [])
+  }, [queryClient])
 
   function switchBusiness(id: string) {
     const b = businesses.find((b) => b.id === id)

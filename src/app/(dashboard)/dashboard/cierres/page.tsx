@@ -276,7 +276,7 @@ export default function CierresPage() {
   const fromISO = from ? `${from}T00:00:00.000-03:00` : undefined
   const toISO = to ? `${to}T23:59:59.999-03:00` : undefined
 
-  const { data: closuresData, isLoading: closuresLoading } = useQuery({
+  const { data: closuresData } = useQuery({
     queryKey: ['closures', businessId, from, to],
     queryFn: async () => {
       const params = new URLSearchParams()

@@ -15,10 +15,10 @@ interface MpConnection {
 
 export function NoMpConnectionBanner() {
   const { businessId, role } = useActiveBusiness()
-  const isOwner = role === 'OWNER'
+  const isOwner = role === 'OWNER' || role === 'ADMIN'
   const [isPending, setIsPending] = useState(false)
 
-  const { data: connection, isLoading } = useQuery({
+  const { data: connection, isPending } = useQuery({
     queryKey: ['mp-connect', businessId],
     queryFn: () =>
       api
@@ -28,8 +28,9 @@ export function NoMpConnectionBanner() {
     staleTime: 60_000,
   })
 
-  // MP conectado y activo → no mostrar nada
-  if (isLoading || (connection && connection.isActive)) return null
+  // Ocultar mientras carga (isPending cubre tanto "disabled" como "fetching")
+  // o si MP ya está conectado y activo
+  if (isPending || (connection && connection.isActive)) return null
 
   async function handleOAuth() {
     if (!businessId) return
