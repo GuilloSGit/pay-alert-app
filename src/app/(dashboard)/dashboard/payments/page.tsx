@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { NoMpConnectionBanner } from '@/components/ui/NoMpConnectionBanner'
 import { SlideOver } from '@/components/ui/SlideOver'
 import { api } from '@/lib/api'
-import { getUser } from '@/lib/auth'
+
 import { useActiveBusiness } from '@/lib/business-context'
 import { ExportDropdown } from '@/components/ui/ExportDropdown'
 import type { Payment, ApiResponse } from '@/types'
@@ -249,7 +249,7 @@ function DetailPanel({ payment, businessId, onClose }: DetailPanelProps) {
 
 export default function PaymentsPage() {
   const { businessId, businessName } = useActiveBusiness()
-  const userName = getUser()?.name ?? 'Usuario'
+
 
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -369,7 +369,7 @@ export default function PaymentsPage() {
           <ExportDropdown
             businessId={businessId}
             businessName={businessName ?? 'Mi Comercio'}
-            userName={userName}
+            fileStem="pagos"
             buildParams={buildParams}
             locked={planFeatures !== undefined && !planFeatures.dataExport}
           />

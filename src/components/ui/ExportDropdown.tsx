@@ -9,20 +9,26 @@ import {
   downloadXlsx,
   downloadPdf,
 } from '@/lib/export-payments'
+import { getUser } from '@/lib/auth'
 
 interface Props {
-  businessId: string
   businessName: string
-  userName: string
-  buildParams: () => URLSearchParams
+  fileStem: string
   locked?: boolean
+  noPermission?: boolean
+  // Client-side: rows ya cargadas (ej: cierres)
+  rows?: string[][]
+  pdfFn?: (rows: string[][], filename: string, businessName: string, userName: string) => Promise<void>
+  // Server-side: fetch desde BE (ej: pagos)
+  businessId?: string
+  buildParams?: () => URLSearchParams
 }
 
-const OPTIONS: { format: ExportFormat; label: string; description: string; icon: React.ReactNode }[] = [
+const OPTIONS: { format: ExportFormat; label: string; desc: string; icon: React.ReactNode }[] = [
   {
     format: 'csv',
     label: 'CSV',
-    description: 'Compatible con Excel, Sheets y más',
+    desc: 'Compatible con Excel, Sheets y más',
     icon: (
       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -32,7 +38,7 @@ const OPTIONS: { format: ExportFormat; label: string; description: string; icon:
   {
     format: 'xlsx',
     label: 'Excel (XLSX)',
-    description: 'Libro de Excel con hoja de info',
+    desc: 'Libro de Excel con hoja de info',
     icon: (
       <svg className="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -42,7 +48,7 @@ const OPTIONS: { format: ExportFormat; label: string; description: string; icon:
   {
     format: 'pdf',
     label: 'PDF empresarial',
-    description: 'Con membrete, comercio y fecha',
+    desc: 'Con membrete, comercio y fecha',
     icon: (
       <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -51,7 +57,16 @@ const OPTIONS: { format: ExportFormat; label: string; description: string; icon:
   },
 ]
 
-export function ExportDropdown({ businessId, businessName, userName, buildParams, locked = false }: Props) {
+export function ExportDropdown({
+  businessName,
+  fileStem,
+  locked = false,
+  noPermission = false,
+  rows: preloadedRows,
+  pdfFn,
+  businessId,
+  buildParams,
+}: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState<ExportFormat | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -66,36 +81,66 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  async function handleExport(format: ExportFormat) {
+  function handleExport(format: ExportFormat) {
     setOpen(false)
     setLoading(format)
     setError(null)
-
-    try {
-      const params = buildParams()
-      params.delete('cursor')
-      params.delete('limit')
-      const date = new Date().toISOString().slice(0, 10)
-
-      const rows = await fetchExportRows(businessId, params)
-
+    const date = new Date().toISOString().slice(0, 10)
+    const run = async () => {
+      const exportRows = preloadedRows
+        ? preloadedRows
+        : await fetchExportRows(businessId!, buildParams!())
       if (format === 'csv') {
-        const csvText = rows.map((r) => r.map((c) => (c.includes(',') || c.includes('"') ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\n')
-        downloadCsvBlob(csvText, `pagos-${date}.csv`)
+        const csv = exportRows
+          .map((r) =>
+            r.map((v) => (v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v)).join(','),
+          )
+          .join('\n')
+        downloadCsvBlob(csv, `${fileStem}-${date}.csv`)
       } else if (format === 'xlsx') {
-        downloadXlsx(rows, `pagos-${date}.xlsx`, businessName)
+        downloadXlsx(exportRows, `${fileStem}-${date}.xlsx`, businessName)
       } else {
-        await downloadPdf(rows, `pagos-${date}.pdf`, businessName, userName)
+        const userName = getUser()?.name ?? ''
+        const fn = pdfFn ?? downloadPdf
+        await fn(exportRows, `${fileStem}-${date}.pdf`, businessName, userName)
       }
-    } catch {
-      setError('No se pudo exportar. Intentá de nuevo.')
-      setTimeout(() => setError(null), 4000)
-    } finally {
-      setLoading(null)
     }
+    run()
+      .catch((e) => {
+        console.error('[ExportDropdown]', e)
+        setError('No se pudo exportar. Intentá de nuevo.')
+        setTimeout(() => setError(null), 4000)
+      })
+      .finally(() => setLoading(null))
   }
 
-  const isLoading = loading !== null
+  const downloadIcon = (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+  )
+
+  if (noPermission) {
+    return (
+      <div className="relative shrink-0">
+        <button
+          disabled
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
+        >
+          {downloadIcon}
+          Exportar
+        </button>
+        {showTooltip && (
+          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg">
+            <p className="text-xs font-medium text-foreground">Sin permiso para exportar</p>
+            <p className="mt-0.5 text-xs text-muted">Tu rol no permite exportar datos.</p>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   if (locked) {
     return (
@@ -106,9 +151,7 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
           onMouseLeave={() => setShowTooltip(false)}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted opacity-60 cursor-not-allowed"
         >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
+          {downloadIcon}
           Exportar
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
             Profesional
@@ -116,13 +159,15 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
         </button>
         {showTooltip && (
           <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg">
-            <p className="text-xs font-medium text-foreground">Disponible en Plan Business</p>
-            <p className="mt-0.5 text-xs text-muted">Exportá tus pagos en CSV, Excel o PDF empresarial.</p>
+            <p className="text-xs font-medium text-foreground">Disponible en Plan Profesional</p>
+            <p className="mt-0.5 text-xs text-muted">Exportá tus datos en CSV, Excel o PDF empresarial.</p>
           </div>
         )}
       </div>
     )
   }
+
+  const isLoading = loading !== null
 
   return (
     <div ref={ref} className="relative shrink-0">
@@ -132,15 +177,10 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
         className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-100 disabled:opacity-50"
       >
         {isLoading ? (
-          <>
-            <Spinner size="sm" />
-            Exportando...
-          </>
+          <><Spinner size="sm" />Exportando...</>
         ) : (
           <>
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+            {downloadIcon}
             Exportar
             <svg
               className={`h-3.5 w-3.5 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
@@ -163,7 +203,7 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
           <p className="border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted">
             Formato de exportación
           </p>
-          {OPTIONS.map(({ format, label, description, icon }) => (
+          {OPTIONS.map(({ format, label, desc, icon }) => (
             <button
               key={format}
               onClick={() => handleExport(format)}
@@ -172,7 +212,7 @@ export function ExportDropdown({ businessId, businessName, userName, buildParams
               <span className="shrink-0 text-muted">{icon}</span>
               <span>
                 <span className="block text-sm font-medium text-foreground">{label}</span>
-                <span className="block text-xs text-muted">{description}</span>
+                <span className="block text-xs text-muted">{desc}</span>
               </span>
             </button>
           ))}
