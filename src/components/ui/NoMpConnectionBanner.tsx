@@ -16,7 +16,7 @@ interface MpConnection {
 export function NoMpConnectionBanner() {
   const { businessId, role } = useActiveBusiness()
   const isOwner = role === 'OWNER' || role === 'ADMIN'
-  const [isPending, setIsPending] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   const { data: connection, isPending } = useQuery({
     queryKey: ['mp-connect', businessId],
@@ -34,14 +34,14 @@ export function NoMpConnectionBanner() {
 
   async function handleOAuth() {
     if (!businessId) return
-    setIsPending(true)
+    setIsRedirecting(true)
     try {
       const res = await api.get<ApiResponse<{ url: string }>>(
         `/api/v1/businesses/${businessId}/mp-connect/oauth?returnTo=/dashboard`,
       )
       window.location.href = res.data.url
     } catch {
-      setIsPending(false)
+      setIsRedirecting(false)
     }
   }
 
@@ -72,10 +72,10 @@ export function NoMpConnectionBanner() {
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
             <button
               onClick={handleOAuth}
-              disabled={isPending}
+              disabled={isRedirecting}
               className="flex items-center justify-center gap-2 rounded-lg bg-[#009EE3] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {isPending ? (
+              {isRedirecting ? (
                 <><Spinner size="sm" className="border-white" />Redirigiendo...</>
               ) : (
                 <>
