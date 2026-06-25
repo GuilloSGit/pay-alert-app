@@ -85,48 +85,14 @@ export function ExportDropdown({
 
   function handleExport(format: ExportFormat) {
     setOpen(false)
-    setError(null)
-
-    // CSV y XLSX con rows ya cargadas (Cierres): ejecutar sincrónicamente
-    // dentro del mismo event handler para que el browser lo acepte como
-    // descarga iniciada por el usuario (sin async delay).
-    if (preloadedRows && format !== 'pdf') {
-      setLoading(format)
-      try {
-        if (format === 'csv') {
-          const csv = preloadedRows
-            .map((r) =>
-              r.map((v) => (v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v)).join(','),
-            )
-            .join('\n')
-          downloadCsvBlob(csv, `${filename}.csv`)
-        } else {
-          downloadXlsx(preloadedRows, `${filename}.xlsx`, businessName)
-        }
-        setSuccess(true)
-        setTimeout(() => setSuccess(false), 3000)
-      } catch (e) {
-        console.error('[ExportDropdown]', e)
-        setError('No se pudo exportar. Intentá de nuevo.')
-        setTimeout(() => setError(null), 6000)
-      } finally {
-        setLoading(null)
-      }
-      return
-    }
-
-    // PDF (siempre async por dynamic imports) y Pagos (fetch al BE)
     setLoading(format)
+    setError(null)
     const run = async () => {
       const exportRows = preloadedRows
         ? preloadedRows
         : await fetchExportRows(businessId!, buildParams!())
       if (format === 'csv') {
-        const csv = exportRows
-          .map((r) =>
-            r.map((v) => (v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v)).join(','),
-          )
-          .join('\n')
+        const csv = exportRows.map((r) => r.join(',')).join('\n')
         downloadCsvBlob(csv, `${filename}.csv`)
       } else if (format === 'xlsx') {
         downloadXlsx(exportRows, `${filename}.xlsx`, businessName)
@@ -135,6 +101,8 @@ export function ExportDropdown({
         const fn = pdfFn ?? downloadPdf
         await fn(exportRows, `${filename}.pdf`, businessName, userName)
       }
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
     }
     run()
       .catch((e) => {
