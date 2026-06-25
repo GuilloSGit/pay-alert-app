@@ -71,6 +71,7 @@ export function ExportDropdown({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState<ExportFormat | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -102,6 +103,8 @@ export function ExportDropdown({
         } else {
           downloadXlsx(preloadedRows, `${filename}.xlsx`, businessName)
         }
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 3000)
       } catch (e) {
         console.error('[ExportDropdown]', e)
         setError('No se pudo exportar. Intentá de nuevo.')
@@ -206,6 +209,13 @@ export function ExportDropdown({
       >
         {isLoading ? (
           <><Spinner size="sm" />Exportando...</>
+        ) : success ? (
+          <>
+            <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-green-700">Descargado</span>
+          </>
         ) : (
           <>
             {downloadIcon}

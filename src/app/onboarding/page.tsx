@@ -484,6 +484,7 @@ function OnboardingContent() {
           if (mpRes.data?.isActive) {
             // MP conectado — marcar fundamentales completos, ir al paso 3 o dashboard
             localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+window.dispatchEvent(new StorageEvent('storage', { key: ONBOARDING_DONE_KEY, newValue: '1' }))
             setStep(3)
           } else {
             setStep(2)
@@ -505,11 +506,13 @@ function OnboardingContent() {
 
   function handleStep2Done(mpConnected: boolean) {
     if (mpConnected) localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+window.dispatchEvent(new StorageEvent('storage', { key: ONBOARDING_DONE_KEY, newValue: '1' }))
     setStep(3)
   }
 
   function handleDone() {
     localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+window.dispatchEvent(new StorageEvent('storage', { key: ONBOARDING_DONE_KEY, newValue: '1' }))
     router.replace('/dashboard')
   }
 
@@ -522,6 +525,7 @@ function OnboardingContent() {
           <button
             onClick={() => {
               localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+window.dispatchEvent(new StorageEvent('storage', { key: ONBOARDING_DONE_KEY, newValue: '1' }))
               router.replace('/dashboard')
             }}
             className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
@@ -567,6 +571,7 @@ function OnboardingContent() {
                   <button
                     onClick={() => {
                       localStorage.setItem(ONBOARDING_DONE_KEY, '1')
+window.dispatchEvent(new StorageEvent('storage', { key: ONBOARDING_DONE_KEY, newValue: '1' }))
                       router.replace('/dashboard')
                     }}
                     className="underline hover:text-gray-600"
