@@ -133,6 +133,11 @@ function parseCsv(text: string): string[][] {
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
 
+export function buildCsvDataUrl(rows: string[][]): string {
+  const csv = '﻿' + rows.map((r) => r.join(',')).join('\n')
+  return 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+}
+
 export function downloadCsvBlob(csvText: string, filename: string) {
   const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' })
   triggerDownload(URL.createObjectURL(blob), filename)
@@ -163,6 +168,24 @@ export function downloadXlsx(rows: string[][], filename: string, businessName: s
   XLSX.utils.book_append_sheet(wb, meta, 'Info')
 
   XLSX.writeFile(wb, filename)
+}
+
+export function buildXlsxDataUrl(rows: string[][], businessName: string): string {
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  ws['!cols'] = [
+    { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 12 },
+    { wch: 30 }, { wch: 22 }, { wch: 26 }, { wch: 20 }, { wch: 22 }, { wch: 22 },
+  ]
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos')
+  const meta = XLSX.utils.aoa_to_sheet([
+    ['Comercio', businessName],
+    ['Exportado el', new Date().toLocaleString('es-AR')],
+    ['Filas de datos', rows.length > 0 ? rows.length - 1 : 0],
+  ])
+  XLSX.utils.book_append_sheet(wb, meta, 'Info')
+  const b64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' }) as string
+  return `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${b64}`
 }
 
 // ── PDF ───────────────────────────────────────────────────────────────────────

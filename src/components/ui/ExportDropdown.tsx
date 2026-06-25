@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Spinner } from './Spinner'
 import {
   type ExportFormat,
@@ -8,6 +8,8 @@ import {
   downloadCsvBlob,
   downloadXlsx,
   downloadPdf,
+  buildCsvDataUrl,
+  buildXlsxDataUrl,
 } from '@/lib/export-payments'
 import { getUser } from '@/lib/auth'
 
@@ -74,6 +76,18 @@ export function ExportDropdown({
   const [success, setSuccess] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  // Pre-computar data URLs para CSV/XLSX cuando los rows ya están en memoria.
+  // Esto evita usar a.click() desde JS (que Chrome puede silenciar) — el
+  // usuario clickea directamente el <a href download>, garantizando el download.
+  const csvDataUrl = useMemo(
+    () => (preloadedRows ? buildCsvDataUrl(preloadedRows) : null),
+    [preloadedRows],
+  )
+  const xlsxDataUrl = useMemo(
+    () => (preloadedRows ? buildXlsxDataUrl(preloadedRows, businessName) : null),
+    [preloadedRows, businessName],
+  )
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -209,19 +223,48 @@ export function ExportDropdown({
           <p className="border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted">
             Formato de exportación
           </p>
-          {OPTIONS.map(({ format, label, desc, icon }) => (
-            <button
-              key={format}
-              onClick={() => handleExport(format)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface first-of-type:rounded-t-xl last-of-type:rounded-b-xl"
-            >
-              <span className="shrink-0 text-muted">{icon}</span>
-              <span>
-                <span className="block text-sm font-medium text-foreground">{label}</span>
-                <span className="block text-xs text-muted">{desc}</span>
-              </span>
-            </button>
-          ))}
+          {OPTIONS.map(({ format, label, desc, icon }) => {
+            const directUrl = format === 'csv' ? csvDataUrl : format === 'xlsx' ? xlsxDataUrl : null
+            const directFilename = `${filename}.${format}`
+            const commonContent = (
+              <>
+                <span className="shrink-0 text-muted">{icon}</span>
+                <span>
+                  <span className="block text-sm font-medium text-foreground">{label}</span>
+                  <span className="block text-xs text-muted">{desc}</span>
+                </span>
+              </>
+            )
+            const commonClass = 'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface first-of-type:rounded-t-xl last-of-type:rounded-b-xl'
+
+            if (directUrl) {
+              return (
+                <a
+                  key={format}
+                  href={directUrl}
+                  download={directFilename}
+                  onClick={() => {
+                    setOpen(false)
+                    setSuccess(true)
+                    setTimeout(() => setSuccess(false), 3000)
+                  }}
+                  className={commonClass}
+                >
+                  {commonContent}
+                </a>
+              )
+            }
+
+            return (
+              <button
+                key={format}
+                onClick={() => handleExport(format)}
+                className={commonClass}
+              >
+                {commonContent}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
