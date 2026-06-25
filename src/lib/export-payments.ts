@@ -255,7 +255,11 @@ export async function downloadPdf(
 
 // ── PDF Cierres ───────────────────────────────────────────────────────────────
 
-const CIERRE_HEADERS = ['Fecha', 'Método de pago', 'Pagos', 'Total ARS']
+const PRIMARY: [number, number, number] = [5, 150, 105]
+
+function fmtARS(amount: string | number): string {
+  return `$ ${Number(amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 export async function downloadCierresPdf(
   rows: string[][],
@@ -272,14 +276,12 @@ export async function downloadCierresPdf(
   const dateStr = now.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
   const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 
-  doc.setFillColor(5, 150, 105)
+  doc.setFillColor(...PRIMARY)
   doc.rect(0, 0, 210, 18, 'F')
-
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
   doc.setTextColor(255, 255, 255)
   doc.text('Pay Alert', 10, 12)
-
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.text('Cierres diarios', 38, 12)
@@ -288,24 +290,56 @@ export async function downloadCierresPdf(
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.text(businessName, 10, 28)
-
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(100, 116, 139)
   doc.text(`Exportado por ${userName}`, 10, 34)
   doc.text(`${dateStr} · ${timeStr}`, 10, 39)
 
+  // Agrupar filas por fecha
   const dataRows = rows.length > 1 ? rows.slice(1) : []
   doc.text(`${dataRows.length} registro${dataRows.length !== 1 ? 's' : ''}`, 10, 44)
 
+  const groups: { date: string; methods: string[][] }[] = []
+  for (const [date, method, count, amount] of dataRows) {
+    const last = groups[groups.length - 1]
+    if (last?.date === date) {
+      last.methods.push([method, count, amount])
+    } else {
+      groups.push({ date, methods: [[method, count, amount]] })
+    }
+  }
+
+  // Construir body con fila-header por día + filas de métodos
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: any[] = []
+  for (const group of groups) {
+    const dayTotal = group.methods.reduce((sum, [, , amt]) => sum + Number(amt), 0)
+    const dayLabel = new Date(group.date + 'T12:00:00').toLocaleDateString('es-AR', {
+      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+    }).replace(/^\w/, (c) => c.toUpperCase())
+
+    body.push([
+      { content: dayLabel, colSpan: 2, styles: { fillColor: PRIMARY, textColor: [255,255,255], fontStyle: 'bold', fontSize: 8.5, cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } } },
+      { content: fmtARS(dayTotal), styles: { fillColor: PRIMARY, textColor: [255,255,255], fontStyle: 'bold', halign: 'right', fontSize: 8.5, cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } } },
+    ])
+    for (const [method, count, amount] of group.methods) {
+      body.push([
+        method,
+        { content: count, styles: { halign: 'right' } },
+        { content: fmtARS(amount), styles: { halign: 'right' } },
+      ])
+    }
+  }
+
   autoTable(doc, {
-    head: [CIERRE_HEADERS],
-    body: dataRows,
+    head: [['Método de pago', 'Pagos', 'Total ARS']],
+    body,
     startY: 50,
-    styles: { fontSize: 8, cellPadding: 2.5 },
-    headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [248, 250, 249] },
-    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } },
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: PRIMARY, textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: {},
+    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
     margin: { left: 10, right: 10 },
   })
 
