@@ -79,30 +79,35 @@ El `Sidebar` incluye un componente `BusinessSwitcher` al tope:
 - Cierra con click fuera (listener `mousedown` en `useEffect` con `useRef<HTMLDivElement>`)
 - El `Sidebar` ya no recibe `role` como prop — usa `useActiveBusiness()` directamente
 
-### Downloads en Chrome — usar `<a href download>` real, no `a.click()` desde JS
+### Downloads en Chrome — patrón correcto y permisos de sitio
 
-Chrome silencia `a.click()` llamado programáticamente cuando el usuario tiene "Ask where to save each file" activo o la descarga no está claramente asociada a un gesto de usuario. El download history queda vacío sin error en consola.
+**Código (commit `5ad8897`):** `a.click()` funciona si se llama sincrónicamente en el `onClick` del button **y sin `document.body.appendChild`**. El elemento debe crearse en memoria sin montarse al DOM.
 
-**Regla:** Para descargas client-side donde los datos ya están en memoria (ej: Cierres), pre-computar un `data:` URL o blob URL y renderizarlo como un `<a href={url} download={filename}>` real en el DOM. El usuario clickea el `<a>` directamente → Chrome lo reconoce como gesto del usuario → descarga sin restricciones.
+```ts
+// ✅ Correcto: síncrono en onClick, sin body.appendChild
+onClick={() => {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()           // ← sin document.body.appendChild antes
+  URL.revokeObjectURL(url)
+}}
 
-```tsx
-// ✅ Correcto: el usuario clickea el <a> directamente
-const csvDataUrl = useMemo(
-  () => preloadedRows ? buildCsvDataUrl(preloadedRows) : null,
-  [preloadedRows]
-)
-<a href={csvDataUrl} download={`${filename}.csv`}>CSV</a>
-
-// ❌ Problemático: Chrome puede ignorar a.click() desde JS
-const a = document.createElement('a')
-a.href = blobUrl
-a.download = filename
-a.click()  // ← Chrome puede silenciarlo
+// ❌ Roto: document.body.appendChild antes de a.click() rompe Chrome
+document.body.appendChild(a)
+a.click()
+document.body.removeChild(a)
 ```
 
-`buildCsvDataUrl` y `buildXlsxDataUrl` están en `src/lib/export-payments.ts`.
+**Permisos Chrome (problema de usuario, no de código):** Chrome puede bloquear descargas automáticas silenciosamente aunque el código sea correcto. Síntomas: el botón muestra "✓ Descargado" (el JS corrió) pero no aparece ningún archivo. Fix para el usuario:
+1. `chrome://settings/content/automaticDownloads` → agregar `pay-alert.com.ar` a "Permitir"
+2. `chrome://settings/downloads` → desactivar "Preguntar dónde guardar cada archivo"
 
 **Para descargas asíncronas (Pagos):** el gesto del usuario se pierde después de `await fetchExportRows(...)`. La solución correcta es un API route de Next.js (`/api/export/...`) que haga el fetch server-side con el Bearer token y devuelva el archivo con `Content-Disposition: attachment`. El usuario navega a esa URL directamente.
+
+**XLSX:** usa `<a href="data:..." download>` renderizado en el DOM — el usuario clickea el `<a>` directamente. `buildXlsxDataUrl` está en `src/lib/export-payments.ts`.
 
 ### `useSyncExternalStore` para leer `localStorage` en componentes
 
