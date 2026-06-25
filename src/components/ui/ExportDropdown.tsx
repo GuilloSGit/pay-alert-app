@@ -8,7 +8,6 @@ import {
   downloadCsvBlob,
   downloadXlsx,
   downloadPdf,
-  buildCsvDataUrl,
   buildXlsxDataUrl,
 } from '@/lib/export-payments'
 import { getUser } from '@/lib/auth'
@@ -80,10 +79,6 @@ export function ExportDropdown({
   // Pre-computar data URLs para CSV/XLSX cuando los rows ya están en memoria.
   // Esto evita usar a.click() desde JS (que Chrome puede silenciar) — el
   // usuario clickea directamente el <a href download>, garantizando el download.
-  const csvDataUrl = useMemo(
-    () => (preloadedRows ? buildCsvDataUrl(preloadedRows) : null),
-    [preloadedRows],
-  )
   const xlsxDataUrl = useMemo(
     () => (preloadedRows ? buildXlsxDataUrl(preloadedRows, businessName) : null),
     [preloadedRows, businessName],
@@ -224,8 +219,6 @@ export function ExportDropdown({
             Formato de exportación
           </p>
           {OPTIONS.map(({ format, label, desc, icon }) => {
-            const directUrl = format === 'csv' ? csvDataUrl : format === 'xlsx' ? xlsxDataUrl : null
-            const directFilename = `${filename}.${format}`
             const commonContent = (
               <>
                 <span className="shrink-0 text-muted">{icon}</span>
@@ -237,12 +230,39 @@ export function ExportDropdown({
             )
             const commonClass = 'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface first-of-type:rounded-t-xl last-of-type:rounded-b-xl'
 
-            if (directUrl) {
+            // CSV con rows pre-cargadas: patrón original — a.click() sin body.appendChild,
+            // llamado directo desde el onClick del button (sin capas async intermedias).
+            if (format === 'csv' && preloadedRows) {
+              return (
+                <button
+                  key={format}
+                  className={commonClass}
+                  onClick={() => {
+                    const csv = preloadedRows.map((r) => r.join(',')).join('\n')
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${filename}.csv`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    setOpen(false)
+                    setSuccess(true)
+                    setTimeout(() => setSuccess(false), 3000)
+                  }}
+                >
+                  {commonContent}
+                </button>
+              )
+            }
+
+            // XLSX con rows: <a href data-url download> — click directo del usuario
+            if (format === 'xlsx' && xlsxDataUrl) {
               return (
                 <a
                   key={format}
-                  href={directUrl}
-                  download={directFilename}
+                  href={xlsxDataUrl}
+                  download={`${filename}.xlsx`}
                   onClick={() => {
                     setOpen(false)
                     setSuccess(true)
