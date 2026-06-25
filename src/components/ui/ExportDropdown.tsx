@@ -84,8 +84,36 @@ export function ExportDropdown({
 
   function handleExport(format: ExportFormat) {
     setOpen(false)
-    setLoading(format)
     setError(null)
+
+    // CSV y XLSX con rows ya cargadas (Cierres): ejecutar sincrónicamente
+    // dentro del mismo event handler para que el browser lo acepte como
+    // descarga iniciada por el usuario (sin async delay).
+    if (preloadedRows && format !== 'pdf') {
+      setLoading(format)
+      try {
+        if (format === 'csv') {
+          const csv = preloadedRows
+            .map((r) =>
+              r.map((v) => (v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v)).join(','),
+            )
+            .join('\n')
+          downloadCsvBlob(csv, `${filename}.csv`)
+        } else {
+          downloadXlsx(preloadedRows, `${filename}.xlsx`, businessName)
+        }
+      } catch (e) {
+        console.error('[ExportDropdown]', e)
+        setError('No se pudo exportar. Intentá de nuevo.')
+        setTimeout(() => setError(null), 6000)
+      } finally {
+        setLoading(null)
+      }
+      return
+    }
+
+    // PDF (siempre async por dynamic imports) y Pagos (fetch al BE)
+    setLoading(format)
     const run = async () => {
       const exportRows = preloadedRows
         ? preloadedRows
@@ -109,7 +137,7 @@ export function ExportDropdown({
       .catch((e) => {
         console.error('[ExportDropdown]', e)
         setError('No se pudo exportar. Intentá de nuevo.')
-        setTimeout(() => setError(null), 4000)
+        setTimeout(() => setError(null), 6000)
       })
       .finally(() => setLoading(null))
   }
