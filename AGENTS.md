@@ -79,6 +79,54 @@ El `Sidebar` incluye un componente `BusinessSwitcher` al tope:
 - Cierra con click fuera (listener `mousedown` en `useEffect` con `useRef<HTMLDivElement>`)
 - El `Sidebar` ya no recibe `role` como prop — usa `useActiveBusiness()` directamente
 
+### Downloads en Chrome — usar `<a href download>` real, no `a.click()` desde JS
+
+Chrome silencia `a.click()` llamado programáticamente cuando el usuario tiene "Ask where to save each file" activo o la descarga no está claramente asociada a un gesto de usuario. El download history queda vacío sin error en consola.
+
+**Regla:** Para descargas client-side donde los datos ya están en memoria (ej: Cierres), pre-computar un `data:` URL o blob URL y renderizarlo como un `<a href={url} download={filename}>` real en el DOM. El usuario clickea el `<a>` directamente → Chrome lo reconoce como gesto del usuario → descarga sin restricciones.
+
+```tsx
+// ✅ Correcto: el usuario clickea el <a> directamente
+const csvDataUrl = useMemo(
+  () => preloadedRows ? buildCsvDataUrl(preloadedRows) : null,
+  [preloadedRows]
+)
+<a href={csvDataUrl} download={`${filename}.csv`}>CSV</a>
+
+// ❌ Problemático: Chrome puede ignorar a.click() desde JS
+const a = document.createElement('a')
+a.href = blobUrl
+a.download = filename
+a.click()  // ← Chrome puede silenciarlo
+```
+
+`buildCsvDataUrl` y `buildXlsxDataUrl` están en `src/lib/export-payments.ts`.
+
+**Para descargas asíncronas (Pagos):** el gesto del usuario se pierde después de `await fetchExportRows(...)`. La solución correcta es un API route de Next.js (`/api/export/...`) que haga el fetch server-side con el Bearer token y devuelva el archivo con `Content-Disposition: attachment`. El usuario navega a esa URL directamente.
+
+### `useSyncExternalStore` para leer `localStorage` en componentes
+
+`useState(() => localStorage.getItem(key))` en el initializer causa hydration mismatch (error React #418): el servidor no tiene localStorage → retorna `null`/`false`, el cliente retorna el valor real → React detecta diferencia y los event handlers pueden quedar rotos.
+
+**Patrón correcto:**
+```tsx
+const showWizard = useSyncExternalStore(
+  (cb) => {
+    window.addEventListener('storage', cb)
+    return () => window.removeEventListener('storage', cb)
+  },
+  () => !localStorage.getItem(ONBOARDING_DONE_KEY),  // snapshot cliente
+  () => false,                                         // snapshot servidor (SSR/hydration)
+)
+```
+
+El `serverSnapshot` (`() => false`) garantiza que SSR y hydration produzcan el mismo valor inicial.
+
+**Trampa adicional:** el evento `storage` nativo no se dispara en el mismo tab. Si se llama `localStorage.setItem(key, val)` en el mismo tab, hay que dispararlo manualmente:
+```ts
+window.dispatchEvent(new StorageEvent('storage', { key, newValue: val }))
+```
+
 ### `fetchExportRows` — debe usar `NEXT_PUBLIC_API_URL`, no URL relativa
 `src/lib/export-payments.ts` hace un `fetch` nativo (no usa `api.ts`) porque necesita leer la respuesta como `text()` en vez de JSON. **Trampa:** si se usa una URL relativa (`/api/v1/...`), funciona local (gracias al rewrite de `next.config.ts`) pero falla en producción (Vercel no tiene ese rewrite). Siempre usar `${BASE_URL}/api/v1/...` donde `BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'`.
 
