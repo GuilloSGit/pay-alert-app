@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearSession } from '@/lib/auth'
@@ -268,10 +268,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const pathname = usePathname()
   const router = useRouter()
   const [showBugReport, setShowBugReport] = useState(false)
-  const [showWizard] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return !localStorage.getItem(ONBOARDING_DONE_KEY)
-  })
+  const showWizard = useSyncExternalStore(
+    (cb) => { window.addEventListener('storage', cb); return () => window.removeEventListener('storage', cb) },
+    () => !localStorage.getItem(ONBOARDING_DONE_KEY),
+    () => false,
+  )
 
   function visible(items: NavItem[]) {
     return items.filter(
