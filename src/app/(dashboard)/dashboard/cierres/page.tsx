@@ -57,13 +57,13 @@ function buildCierresRows(days: ClosureDay[]): string[][] {
   ]
 }
 
+const MONTH_NAMES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
 function buildExportFilename(from: string, to: string): string {
-  const fmt = (iso: string) =>
-    new Date(iso + 'T12:00:00')
-      .toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
-      .replace(/\./g, '')
-      .replace(/\s+/g, '-')
-      .toLowerCase()
+  const fmt = (iso: string) => {
+    const d = new Date(iso + 'T12:00:00')
+    return `${String(d.getDate()).padStart(2, '0')}-${MONTH_NAMES[d.getMonth()]}-${d.getFullYear()}`
+  }
   if (from && to) return `cierres-${fmt(from)}-a-${fmt(to)}`
   if (from) return `cierres-desde-${fmt(from)}`
   if (to) return `cierres-hasta-${fmt(to)}`
