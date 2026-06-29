@@ -6,6 +6,7 @@ export interface NotificationRule {
   id: string
   minAmount: number | null
   closureEmailFrequency: string | null
+  closureEmailHour: number | null
 }
 
 // ─── Dispositivo ──────────────────────────────────────────────────────────────
