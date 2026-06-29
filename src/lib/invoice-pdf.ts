@@ -37,37 +37,33 @@ export async function generateInvoicePdf(invoice: InvoiceData): Promise<void> {
   doc.setFillColor(5, 150, 105) // #059669
   doc.roundedRect(margin, 10, 18, 18, 3, 3, 'F')
 
-  // ── Campana con primitivas jsPDF ──────────────────────────────────────────
-  // Centro del rectángulo verde: cx=margin+9, cy=19
-  // Eje: handle (y=11.5→13.5), cuerpo (y=13.5→20.5), badajo (y=22 r=1)
-  const bx = margin + 9  // 29mm
-  const by = 19          // centro vertical
+  // ── Campana ────────────────────────────────────────────────────────────────
+  const bx = margin + 9  // 29mm — centro del recuadro verde
+  const by = 19          // centro vertical del header
   doc.setFillColor(255, 255, 255)
   doc.setDrawColor(255, 255, 255)
 
-  // Gancho superior — rectángulo redondeado pequeño
-  doc.roundedRect(bx - 1, by - 7.5, 2, 2, 0.5, 0.5, 'F')
+  // Gancho superior
+  doc.roundedRect(bx - 1, by - 8, 2, 2, 0.6, 0.6, 'F')
 
-  // Cuerpo de la campana — path con 2 bezier + 3 líneas
-  // S=(bx, by-5.5) → P1=(bx-4,by+1) → P2=(bx-5,by+1.5) → P3=(bx+5,by+1.5) → P4=(bx+4,by+1) → S
-  // Coordenadas relativas al punto anterior (API doc.lines)
+  // Cuerpo — path simétrico: parte del top-center, lado izquierdo, base, lado derecho
   doc.lines(
     [
-      [-1, 2, -4, 4.5, -4, 6.5],   // S→P1: bezier lado izquierdo
-      [-1, 0.5],                     // P1→P2: vuelo izquierdo
-      [10, 0],                       // P2→P3: ala plana inferior
-      [-1, -0.5],                    // P3→P4: vuelo derecho
-      [0, -2, -3, -6.5, -4, -6.5],  // P4→S: bezier lado derecho
+      [0, 4, -2, 8, -4, 8],    // lado izquierdo: baja recto, luego curva hacia afuera
+      [-1.5, 0.5],              // vuelo izquierdo
+      [11, 0],                  // base plana
+      [-1.5, -0.5],             // vuelo derecho
+      [0, -4, -2, -8, -4, -8], // lado derecho: simétrico al izquierdo
     ],
     bx,
-    by - 5.5,
+    by - 6,
     [1, 1],
     'F',
   )
 
-  // Badajo — círculo bajo el ala
-  doc.circle(bx, by + 3, 1, 'F')
-  // ──────────────────────────────────────────────────────────────────────────
+  // Badajo — dentro de la apertura de la campana
+  doc.circle(bx, by + 4.5, 1, 'F')
+  // ───────────────────────────────────────────────────────────────────────────
 
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
