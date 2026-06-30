@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pay Alert — Pitch Deck</title>
+<style>
+  :root {
+    --green: #059669;
+    --green-light: #34d399;
+    --dark: #040c07;
+    --dark-card: #0d1f14;
+    --dark-border: rgba(5,150,105,0.25);
+    --white: #ffffff;
+    --white-60: rgba(255,255,255,0.6);
+    --white-30: rgba(255,255,255,0.3);
+    --white-10: rgba(255,255,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #111;
+    color: var(--white);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ── Slide container ─────────────────────────────────── */
+  .deck {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(40px);
+    transition: opacity .4s ease, transform .4s ease;
+    background: var(--dark);
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0);
+  }
+
+  .slide.prev {
+    transform: translateX(-40px);
+  }
+
+  /* ── Dots bg ─────────────────────────────────────────── */
+  .dots-bg {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+  }
+
+  .glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(5,150,105,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .glow-bottom {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(5,150,105,0.10) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Navigation ──────────────────────────────────────── */
+  #nav {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 100;
+    background: rgba(4,12,7,0.8);
+    border: 1px solid var(--dark-border);
+    border-radius: 999px;
+    padding: 10px 20px;
+    backdrop-filter: blur(12px);
+  }
+
+  #nav button {
+    background: none;
+    border: none;
+    color: var(--white-60);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color .2s;
+  }
+
+  #nav button:hover { color: var(--white); }
+  #nav button:disabled { opacity: .25; cursor: default; }
+
+  #counter {
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--white-30);
+    min-width: 52px;
+    text-align: center;
+  }
+
+  /* ── Slide number badge ──────────────────────────────── */
+  .slide-num {
+    position: fixed;
+    top: 28px;
+    right: 32px;
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--white-30);
+    z-index: 100;
+  }
+
+  /* ── Logo ────────────────────────────────────────────── */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--green);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+  }
+
+  /* ── Typography ──────────────────────────────────────── */
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--green-light);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -.03em;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: clamp(28px, 3.5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -.025em;
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #34d399, #059669);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sub {
+    font-size: 18px;
+    color: var(--white-60);
+    line-height: 1.6;
+    max-width: 640px;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .muted { color: var(--white-60); }
+
+  /* ── Content layouts ─────────────────────────────────── */
+  .content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+
+  .cols-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+
+  .cols-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  /* ── Cards ───────────────────────────────────────────── */
+  .card {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  .card-sm {
+    background: rgba(13,31,20,0.7);
+    border: 1px solid var(--dark-border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  .card-highlight {
+    background: var(--dark-card);
+    border: 1px solid var(--green);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+  }
+
+  .popular-badge {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ── Stat ────────────────────────────────────────────── */
+  .stat-val {
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 800;
+    font-family: 'SF Mono', monospace;
+    color: var(--green-light);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-lbl {
+    font-size: 13px;
+    color: var(--white-60);
+    line-height: 1.4;
+  }
+
+  /* ── Check list ──────────────────────────────────────── */
+  .check-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .check-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 15px;
+    color: var(--white-60);
+    line-height: 1.4;
+  }
+
+  .check-list li::before {
+    content: '✓';
+    color: var(--green);
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── Flow ────────────────────────────────────────────── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .flow-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .flow-label {
+    font-size: 13px;
+    color: var(--white-60);
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .flow-arrow {
+    color: var(--green);
+    font-size: 20px;
+    flex-shrink: 0;
+    padding: 0 8px;
+    margin-bottom: 26px;
+  }
+
+  /* ── Timeline / roadmap ──────────────────────────────── */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  .tl-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .tl-tag {
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--green-light);
+    background: rgba(5,150,105,0.15);
+    border: 1px solid rgba(5,150,105,0.3);
+    padding: 3px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  .tl-items {
+    font-size: 14px;
+    color: var(--white-60);
+    line-height: 1.6;
+  }
+
+  /* ── Notification mockup ─────────────────────────────── */
+  .notif-card {
+    background: var(--dark-card);
+    border: 1px solid rgba(5,150,105,0.4);
+    border-radius: 20px;
+    padding: 24px;
+    width: 300px;
+    flex-shrink: 0;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.5);
+  }
+
+  .notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  .notif-amount {
+    font-family: monospace;
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    margin-bottom: 4px;
+  }
+
+  .notif-confirmed {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .check-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .notif-meta {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 12px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--white-30);
+  }
+
+  /* ── Pill tag ────────────────────────────────────────── */
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(5,150,105,0.2);
+    color: var(--green-light);
+    border: 1px solid rgba(5,150,105,0.3);
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+
+  /* ── Table ───────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  th {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--white-30);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--white-10);
+  }
+
+  td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--white-60);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.4;
+  }
+
+  td:first-child { font-weight: 600; color: var(--white); }
+  td.green { color: var(--green-light); font-weight: 700; font-family: monospace; }
+  td.center { text-align: center; }
+
+  /* ── CTA button ──────────────────────────────────────── */
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--green);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 16px 36px;
+    border-radius: 14px;
+    text-decoration: none;
+    margin-top: 32px;
+    box-shadow: 0 16px 40px rgba(5,150,105,0.35);
+    transition: background .2s;
+  }
+
+  .cta-btn:hover { background: #047857; }
+
+  .founder-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+
+  /* ── Print / PDF ─────────────────────────────────────── */
+  @media print {
+    body { overflow: visible; height: auto; background: var(--dark); }
+    .deck { height: auto; }
+    .slide {
+      position: relative;
+      opacity: 1 !important;
+      transform: none !important;
+      pointer-events: all;
+      page-break-after: always;
+      height: 100vh;
+    }
+    #nav { display: none; }
+    .slide-num { display: none; }
+  }
+
+  /* ── Keyboard hint ───────────────────────────────────── */
+  #hint {
+    position: fixed;
+    top: 28px;
+    left: 32px;
+    font-size: 11px;
+    color: var(--white-30);
+    z-index: 100;
+  }
+
+  /* Problem numbers */
+  .prob-num {
+    font-size: 48px;
+    font-weight: 900;
+    font-family: monospace;
+    color: rgba(5,150,105,0.15);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="hint">← → para navegar · P para imprimir</div>
+<div class="slide-num" id="slide-num">1 / 13</div>
+
+<div class="deck" id="deck">
+
+  <!-- ══ 01 COVER ══════════════════════════════════════════ -->
+  <div class="slide active" id="s1">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+    <div class="glow-bottom"></div>
+
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <path d="M16 6a2 2 0 0 0-2 2v.87A6 6 0 0 0 10 15v4l-1.5 1.5V21h15v-.5L22 19v-4a6 6 0 0 0-4-5.87V8a2 2 0 0 0-2-2z" fill="white"/>
+            <path d="M13.5 21a2.5 2.5 0 0 0 5 0h-5z" fill="white"/>
+          </svg>
+        </div>
+        <span class="logo-text">Pay Alert</span>
+      </div>
+
+      <div class="label">Ronda de inversión · 2026</div>
+
+      <h1>Nunca más confíes en<br><span class="gradient-text">comprobantes falsos.</span></h1>
+
+      <p class="sub">
+        Notificaciones de cobro verificadas en tiempo real<br>
+        para los +6 millones de comercios argentinos con Mercado Pago.
+      </p>
+
+      <div style="display:flex;gap:32px;margin-top:48px;padding-top:40px;border-top:1px solid rgba(255,255,255,0.08);">
+        <div style="text-align:center;">
+          <div class="stat-val">&lt; 5s</div>
+          <div class="stat-lbl">Tiempo de alerta</div>
+        </div>
+        <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.08);padding-left:32px;">
+          <div class="stat-val">99.9%</div>
+          <div class="stat-lbl">Uptime objetivo</div>
+        </div>
+        <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.08);padding-left:32px;">
+          <div class="stat-val">Cero</div>
+          <div class="stat-lbl">Acceso del equipo<br>a tu cuenta MP</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 02 PROBLEMA ═══════════════════════════════════════ -->
+  <div class="slide" id="s2">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">El problema</div>
+      <h2>El fraude con comprobantes falsos<br>le cuesta dinero a miles de comercios todos los días.</h2>
+
+      <div class="cols-3" style="margin-top:36px;">
+        <div class="card">
+          <div class="prob-num">01</div>
+          <h3>Capturas falsas</h3>
+          <p class="muted" style="font-size:15px;line-height:1.6;">Las capturas de transferencia se falsifican en segundos. Los empleados no tienen forma de verificarlas en el momento.</p>
+        </div>
+        <div class="card">
+          <div class="prob-num">02</div>
+          <h3>Sin acceso a la cuenta</h3>
+          <p class="muted" style="font-size:15px;line-height:1.6;">El dueño no puede —ni debería— dar acceso a su cuenta de Mercado Pago a cada empleado solo para confirmar un cobro.</p>
+        </div>
+        <div class="card">
+          <div class="prob-num">03</div>
+          <h3>Dueño atado al celular</h3>
+          <p class="muted" style="font-size:15px;line-height:1.6;">El único que puede verificar los pagos es el dueño. Resultado: revisar el celular todo el día o confiar y arriesgar.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:32px;padding:20px 24px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:12px;">
+        <p style="font-size:15px;color:rgba(255,255,255,0.7);line-height:1.6;">
+          <strong style="color:white;">Mercado Pago procesa el 40% de las transacciones digitales en Argentina.</strong>
+          La gran mayoría de los cobros son por QR o transferencia — los dos canales más difíciles de verificar en tiempo real.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 03 SOLUCIÓN ═══════════════════════════════════════ -->
+  <div class="slide" id="s3">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content" style="display:flex;gap:64px;align-items:center;">
+      <div style="flex:1;">
+        <div class="label">La solución</div>
+        <h2>Alertas verificadas.<br>En segundos.<br>Sin compartir contraseñas.</h2>
+        <p class="muted" style="font-size:16px;line-height:1.7;margin-bottom:24px;">
+          Pay Alert se conecta a Mercado Pago vía OAuth oficial y notifica al equipo cada vez que llega un pago — directamente desde los servidores de MP, sin intermediarios.
+        </p>
+        <ul class="check-list">
+          <li>El empleado ve la confirmación en su celular en &lt; 5 segundos</li>
+          <li>La alerta viene de Mercado Pago, no de una captura</li>
+          <li>El dueño nunca compartió su contraseña</li>
+          <li>Funciona en cualquier browser — sin app que instalar</li>
+        </ul>
+      </div>
+
+      <div class="notif-card">
+        <div class="notif-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="live-dot"></div>
+            <span style="font-size:12px;font-weight:700;color:#34d399;">Pay Alert</span>
+          </div>
+          <span style="font-family:monospace;font-size:11px;color:var(--white-30);">ahora mismo</span>
+        </div>
+        <p style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--white-30);margin-bottom:6px;">Pago verificado</p>
+        <div class="notif-amount">$15.000</div>
+        <div class="notif-confirmed">
+          <div class="check-circle">✓</div>
+          Confirmado por Mercado Pago
+        </div>
+        <div class="notif-meta">Farmacia del Centro · Terminal QR · hace 0s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 04 CÓMO FUNCIONA ══════════════════════════════════ -->
+  <div class="slide" id="s4">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content" style="text-align:center;">
+      <div class="label">Cómo funciona</div>
+      <h2>En marcha en menos de 5 minutos.</h2>
+      <p class="muted" style="margin-bottom:8px;font-size:16px;">Sin instalaciones, sin integraciones técnicas. Tres pasos.</p>
+
+      <div class="flow" style="margin-top:40px;">
+        <div class="flow-step">
+          <div class="flow-icon">🔐</div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Conectás MP</div>
+          <div class="flow-label">OAuth oficial.<br>Sin compartir contraseña.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">👥</div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Invitás al equipo</div>
+          <div class="flow-label">Por email, con roles<br>y permisos.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">⚡</div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Pagos verificados</div>
+          <div class="flow-label">Notificación en &lt; 5s<br>en todos los dispositivos.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:48px;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:14px;padding:20px 32px;display:inline-block;text-align:left;">
+        <p style="font-family:monospace;font-size:13px;color:var(--white-30);line-height:2;">
+          <span style="color:#34d399;">Pago</span> → MP → Webhook (HMAC-SHA256 ✓) → Pay Alert → <span style="color:#34d399;">Push + WebSocket</span> → Equipo
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 05 MERCADO ════════════════════════════════════════ -->
+  <div class="slide" id="s5">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Mercado</div>
+      <h2>Un problema masivo<br>sin solución directa.</h2>
+
+      <div class="cols-3" style="margin-top:36px;">
+        <div class="card">
+          <div class="stat-val">+6M</div>
+          <div class="stat-lbl" style="font-size:15px;margin-top:8px;">Comercios con cuenta<br>Mercado Pago en Argentina</div>
+          <div style="margin-top:16px;font-size:13px;color:var(--white-30);">TAM</div>
+        </div>
+        <div class="card">
+          <div class="stat-val">~1.5M</div>
+          <div class="stat-lbl" style="font-size:15px;margin-top:8px;">Con al menos un empleado<br>(target inicial)</div>
+          <div style="margin-top:16px;font-size:13px;color:var(--white-30);">SAM</div>
+        </div>
+        <div class="card-highlight">
+          <div class="stat-val">5.000</div>
+          <div class="stat-lbl" style="font-size:15px;margin-top:8px;">Objetivo año 1<br>(early adopters digitales)</div>
+          <div style="margin-top:16px;font-size:13px;color:var(--green-light);font-weight:700;">SOM · Año 1</div>
+        </div>
+      </div>
+
+      <div style="margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card-sm">
+          <div style="font-size:13px;color:var(--white-30);margin-bottom:4px;">MRR objetivo año 1 (plan Profesional)</div>
+          <div style="font-family:monospace;font-size:24px;font-weight:800;color:var(--green-light);">~$250M ARS/mes</div>
+          <div style="font-size:13px;color:var(--white-30);margin-top:4px;">5.000 comercios × $49.999</div>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:13px;color:var(--white-30);margin-bottom:4px;">Competencia directa en Argentina</div>
+          <div style="font-family:monospace;font-size:24px;font-weight:800;color:#34d399;">Ninguna</div>
+          <div style="font-size:13px;color:var(--white-30);margin-top:4px;">Primer movimiento — ventana abierta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 06 PRODUCTO ═══════════════════════════════════════ -->
+  <div class="slide" id="s6">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Producto</div>
+      <h2>Todo lo que necesita un comercio<br>para cobrar con confianza.</h2>
+
+      <div class="cols-4" style="margin-top:32px;">
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">⚡</div>
+          <h3 style="font-size:15px;">Alertas en tiempo real</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Push nativo + WebSocket. &lt; 5s desde que confirma el cliente.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">👥</div>
+          <h3 style="font-size:15px;">Roles y permisos</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">OWNER · ADMIN · MEMBER · OBSERVER. Cada uno ve lo que debe ver.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">📊</div>
+          <h3 style="font-size:15px;">Historial y cierres</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Filtros, exportación CSV/XLSX/PDF. Cierres diarios por método de cobro.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">🔔</div>
+          <h3 style="font-size:15px;">Alertas configurables</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Monto mínimo, quiet hours, resumen diario por email.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">🏢</div>
+          <h3 style="font-size:15px;">Multi-comercio</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Cadenas y franquicias: múltiples sucursales desde un solo login.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">🔗</div>
+          <h3 style="font-size:15px;">Webhooks salientes</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">API pública para integrar con ERP, sistemas de stock o contabilidad.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">🧾</div>
+          <h3 style="font-size:15px;">Consulta AFIP</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Datos del pagador por CUIT desde el detalle de cada cobro.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:22px;margin-bottom:10px;">📱</div>
+          <h3 style="font-size:15px;">PWA instalable</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Sin app que instalar. Funciona en celular, tablet o computadora.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 07 MODELO DE NEGOCIO ══════════════════════════════ -->
+  <div class="slide" id="s7">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Modelo de negocio</div>
+      <h2>SaaS recurrente. Precios claros.<br>14 días de prueba gratis.</h2>
+
+      <div class="cols-3" style="margin-top:36px;align-items:start;">
+        <div class="card">
+          <h3 style="font-size:16px;color:var(--white-60);">Básico</h3>
+          <div style="font-family:monospace;font-size:34px;font-weight:800;margin:12px 0 4px;">$24.999</div>
+          <div style="font-size:13px;color:var(--white-30);margin-bottom:16px;">ARS / mes · 3 usuarios · 1 comercio</div>
+          <ul class="check-list">
+            <li>Alertas en tiempo real</li>
+            <li>Hasta 3 usuarios</li>
+            <li>30 días de historial</li>
+          </ul>
+        </div>
+
+        <div class="card-highlight">
+          <div class="popular-badge">Más popular</div>
+          <h3 style="font-size:16px;">Profesional</h3>
+          <div style="font-family:monospace;font-size:34px;font-weight:800;margin:12px 0 4px;color:var(--green-light);">$49.999</div>
+          <div style="font-size:13px;color:var(--white-30);margin-bottom:16px;">ARS / mes · 6 usuarios · 2 comercios</div>
+          <ul class="check-list">
+            <li>Todo lo del plan Básico</li>
+            <li>1 año de historial</li>
+            <li>Alerta por monto mínimo</li>
+            <li>Exportación CSV / XLSX / PDF</li>
+            <li>Cierres diarios</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:16px;color:var(--white-60);">Enterprise</h3>
+          <div style="font-family:monospace;font-size:28px;font-weight:800;margin:12px 0 4px;">A medida</div>
+          <div style="font-size:13px;color:var(--white-30);margin-bottom:16px;">Usuarios y comercios ilimitados</div>
+          <ul class="check-list">
+            <li>Todo lo del plan Profesional</li>
+            <li>Historial ilimitado</li>
+            <li>Webhooks salientes</li>
+            <li>SLA por contrato</li>
+            <li>Soporte 24/7</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 08 UNIT ECONOMICS ═════════════════════════════════ -->
+  <div class="slide" id="s8">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Unit economics</div>
+      <h2>Márgenes altos desde el<br>primer cliente pagador.</h2>
+
+      <div class="cols-2" style="margin-top:36px;gap:40px;">
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Métrica</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>ARPU (plan Profesional)</td><td class="green">$49.999 ARS/mes</td></tr>
+              <tr><td>Costo operativo por cliente</td><td class="green">&lt; $1 USD/mes</td></tr>
+              <tr><td>Margen bruto estimado</td><td class="green">&gt; 90%</td></tr>
+              <tr><td>Churn objetivo</td><td class="green">&lt; 3% mensual</td></tr>
+              <tr><td>CAC estimado</td><td class="green">~$0 (orgánico)</td></tr>
+              <tr><td>Trial gratuito</td><td class="green">14 días, sin tarjeta</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card-sm">
+            <div style="font-size:13px;color:var(--white-30);margin-bottom:6px;">Infraestructura total / mes</div>
+            <div style="font-family:monospace;font-size:28px;font-weight:800;color:var(--green-light);">&lt; $80 USD</div>
+            <div style="font-size:13px;color:var(--white-30);margin-top:4px;">Vercel + Render + Resend + Firebase</div>
+          </div>
+          <div class="card-sm">
+            <div style="font-size:13px;color:var(--white-30);margin-bottom:6px;">Motor de crecimiento</div>
+            <div style="font-size:16px;font-weight:700;color:white;margin-top:6px;">Boca a boca orgánico</div>
+            <div style="font-size:13px;color:var(--white-30);margin-top:4px;">El empleado que usa Pay Alert recomienda a su jefe. El jefe, a otros comerciantes.</div>
+          </div>
+          <div class="card-sm">
+            <div style="font-size:13px;color:var(--white-30);margin-bottom:6px;">LTV estimado (3% churn mensual)</div>
+            <div style="font-family:monospace;font-size:28px;font-weight:800;color:var(--green-light);">~33 meses</div>
+            <div style="font-size:13px;color:var(--white-30);margin-top:4px;">Producto de valor recurrente y alta retención</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 09 TRACCIÓN ═══════════════════════════════════════ -->
+  <div class="slide" id="s9">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Estado del producto</div>
+      <h2>En producción. Completo.<br>Listo para escalar.</h2>
+
+      <div class="cols-2" style="margin-top:36px;gap:32px;">
+        <div>
+          <p style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--white-30);margin-bottom:14px;">Funcionalidades en producción</p>
+          <ul class="check-list">
+            <li>OAuth Mercado Pago + webhooks firmados HMAC-SHA256</li>
+            <li>Dashboard en tiempo real (WebSocket)</li>
+            <li>Push nativo — Chrome, Firefox, Safari/iOS</li>
+            <li>Exportación CSV / XLSX / PDF</li>
+            <li>Cierres diarios + resumen por email (BullMQ)</li>
+            <li>Gestión de equipo con 4 roles y permisos granulares</li>
+            <li>Multi-comercio con business switcher</li>
+            <li>Suscripciones vía Mercado Pago</li>
+            <li>Facturación con PDF descargable</li>
+            <li>Webhooks salientes firmados (Enterprise)</li>
+            <li>API pública documentada + portal developers</li>
+            <li>Panel de administración interno (admin.pay-alert.com.ar)</li>
+            <li>PWA instalable + bug reports in-app</li>
+          </ul>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <div style="font-size:13px;color:var(--white-30);margin-bottom:8px;">Deploy</div>
+            <table style="margin-top:0;">
+              <tbody>
+                <tr><td style="padding:8px 0;font-size:13px;">Frontend</td><td style="font-size:13px;color:var(--white-60);">Vercel → pay-alert.com.ar</td></tr>
+                <tr><td style="padding:8px 0;font-size:13px;">Backend</td><td style="font-size:13px;color:var(--white-60);">Render → pay-alert-api</td></tr>
+                <tr><td style="padding:8px 0;font-size:13px;">Worker</td><td style="font-size:13px;color:var(--white-60);">Render BullMQ</td></tr>
+                <tr><td style="padding:8px 0;font-size:13px;">Admin</td><td style="font-size:13px;color:var(--white-60);">admin.pay-alert.com.ar</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card-sm">
+            <div style="font-size:13px;color:var(--white-30);margin-bottom:8px;">Stack técnico</div>
+            <div>
+              <span class="pill">Next.js 16</span>
+              <span class="pill">React 19</span>
+              <span class="pill">Fastify 5</span>
+              <span class="pill">TypeScript</span>
+              <span class="pill">Prisma 6</span>
+              <span class="pill">BullMQ</span>
+              <span class="pill">PostgreSQL</span>
+              <span class="pill">Redis</span>
+              <span class="pill">FCM</span>
+              <span class="pill">Tailwind 4</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 10 PANEL ADMIN ════════════════════════════════════ -->
+  <div class="slide" id="s10">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Operaciones</div>
+      <h2>Panel de administración<br>para operar el negocio desde día 1.</h2>
+
+      <div class="cols-3" style="margin-top:32px;">
+        <div class="card-sm">
+          <div style="font-size:20px;margin-bottom:10px;">👤</div>
+          <h3 style="font-size:15px;">Usuarios</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Lista paginada, búsqueda, conteo de comercios por usuario, fecha de registro.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:20px;margin-bottom:10px;">🏪</div>
+          <h3 style="font-size:15px;">Comercios</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Filtros por plan, estado de suscripción, categoría, estado de conexión MP.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:20px;margin-bottom:10px;">💳</div>
+          <h3 style="font-size:15px;">Pagos globales</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Todos los comercios en un solo lugar — auditoría y soporte.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:20px;margin-bottom:10px;">🧾</div>
+          <h3 style="font-size:15px;">Facturación</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">PAID / PENDING / OVERDUE con acciones manuales para casos edge.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:20px;margin-bottom:10px;">🐛</div>
+          <h3 style="font-size:15px;">Bug reports kanban</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">OPEN → IN_PROGRESS → CLOSED. Email automático al usuario al cambiar estado.</p>
+        </div>
+        <div class="card-sm">
+          <div style="font-size:20px;margin-bottom:10px;">📈</div>
+          <h3 style="font-size:15px;">Métricas del sistema</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:6px;">Usuarios activos, pagos procesados, tasa de error, integración UptimeRobot.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;padding:16px 24px;background:rgba(5,150,105,0.06);border:1px solid var(--dark-border);border-radius:10px;">
+        <p style="font-family:monospace;font-size:13px;color:var(--white-30);">
+          GET /admin/users · /admin/businesses · /admin/payments · /admin/invoices · /admin/bugs · /admin/metrics · PATCH /admin/bugs/:id
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 11 ROADMAP ════════════════════════════════════════ -->
+  <div class="slide" id="s11">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content">
+      <div class="label">Roadmap</div>
+      <h2>La base está construida.<br>El crecimiento tiene dirección clara.</h2>
+
+      <div class="cols-2" style="margin-top:36px;gap:40px;align-items:start;">
+        <div>
+          <div class="timeline">
+            <div class="tl-row">
+              <div class="tl-tag">Q3 2026</div>
+              <div class="tl-items">Panel Admin FE — kanban de bugs + métricas visuales<br>Notificaciones por WhatsApp (Meta API)</div>
+            </div>
+            <div class="tl-row">
+              <div class="tl-tag">Q4 2026</div>
+              <div class="tl-items">App móvil nativa (React Native)<br>Integración Modo / Naranja X<br>Exportación formato AFIP / ARCA</div>
+            </div>
+            <div class="tl-row">
+              <div class="tl-tag">Q1 2027</div>
+              <div class="tl-items">Expansión regional — Uruguay, Chile, Colombia<br>(MercadoPago tiene presencia en los tres)</div>
+            </div>
+            <div class="tl-row">
+              <div class="tl-tag">Largo plazo</div>
+              <div class="tl-items">Marketplace de integraciones (ERP, contabilidad)<br>Analytics avanzado para multi-sucursal</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <h3 style="font-size:16px;margin-bottom:12px;">Con inversión, el foco sería:</h3>
+            <ul class="check-list">
+              <li><strong style="color:white;">Growth</strong> — campañas en Instagram/TikTok, alianzas con contadores y cámaras de comercio</li>
+              <li><strong style="color:white;">Equipo</strong> — soporte al cliente, ventas y un segundo desarrollador</li>
+              <li><strong style="color:white;">Producto</strong> — más pasarelas, app nativa, analytics avanzado</li>
+              <li><strong style="color:white;">Expansión</strong> — misma propuesta de valor en otros mercados con MP</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 12 EQUIPO ═════════════════════════════════════════ -->
+  <div class="slide" id="s12">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+
+    <div class="content" style="display:flex;gap:80px;align-items:center;">
+      <div style="flex:1;">
+        <div class="label">Equipo</div>
+        <h2>Construido por alguien<br>que entiende el problema.</h2>
+        <p class="muted" style="font-size:16px;line-height:1.7;margin-top:20px;">
+          Pay Alert nació de una necesidad real: darle a los comerciantes argentinos una forma confiable de verificar pagos sin depender de capturas de pantalla. No es un proyecto académico ni un MVP apresurado — es un producto en producción, completo y funcional.
+        </p>
+        <p class="muted" style="font-size:15px;line-height:1.7;margin-top:16px;">
+          El mismo nivel de criterio técnico que ven en Pay Alert se aplica en cada proyecto personalizado de ga-software.dev.
+        </p>
+      </div>
+
+      <div style="flex:0 0 340px;">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+            <div class="founder-avatar">GA</div>
+            <div>
+              <div style="font-weight:700;font-size:18px;">Guillermo Andrada</div>
+              <div style="color:var(--white-60);font-size:14px;margin-top:4px;">Fundador y desarrollador full-stack</div>
+              <a href="https://ga-software.dev" style="color:var(--green-light);font-size:13px;font-weight:600;text-decoration:none;margin-top:6px;display:inline-block;">ga-software.dev ↗</a>
+            </div>
+          </div>
+
+          <p style="font-size:14px;color:var(--white-60);line-height:1.6;margin-bottom:20px;">
+            Desarrollador con experiencia en productos SaaS, integraciones con Mercado Pago y arquitecturas cloud. Pay Alert es product + engineering — cero dependencias externas.
+          </p>
+
+          <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:16px;display:flex;flex-direction:column;gap:8px;">
+            <a href="mailto:guillermoandrada@gmail.com" style="font-size:13px;color:var(--white-60);text-decoration:none;">✉ guillermoandrada@gmail.com</a>
+            <a href="https://wa.me/543876295801" style="font-size:13px;color:var(--white-60);text-decoration:none;">📱 +54 387 629 5801</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 13 CTA FINAL ══════════════════════════════════════ -->
+  <div class="slide" id="s13">
+    <div class="dots-bg"></div>
+    <div class="glow"></div>
+    <div class="glow-bottom"></div>
+
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:780px;">
+      <div class="logo" style="margin-bottom:32px;">
+        <div class="logo-icon">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <path d="M16 6a2 2 0 0 0-2 2v.87A6 6 0 0 0 10 15v4l-1.5 1.5V21h15v-.5L22 19v-4a6 6 0 0 0-4-5.87V8a2 2 0 0 0-2-2z" fill="white"/>
+            <path d="M13.5 21a2.5 2.5 0 0 0 5 0h-5z" fill="white"/>
+          </svg>
+        </div>
+        <span class="logo-text">Pay Alert</span>
+      </div>
+
+      <div class="label">La oportunidad</div>
+
+      <h1>Un mercado de +6 millones.<br>Sin competencia directa.<br><span class="gradient-text">En producción hoy.</span></h1>
+
+      <p class="sub" style="margin-top:24px;">
+        El producto está construido. El problema es real. El mercado es enorme.<br>
+        Lo que viene es escalar — y para eso buscamos un socio inversor.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:40px;">
+        <div style="display:flex;gap:48px;padding:24px 40px;background:rgba(13,31,20,0.8);border:1px solid var(--dark-border);border-radius:16px;">
+          <div style="text-align:center;">
+            <div class="stat-val">pay-alert.com.ar</div>
+            <div class="stat-lbl">Demo en vivo</div>
+          </div>
+          <div style="border-left:1px solid rgba(255,255,255,0.08);padding-left:48px;text-align:center;">
+            <div class="stat-val">+54 387 629 5801</div>
+            <div class="stat-lbl">WhatsApp directo</div>
+          </div>
+          <div style="border-left:1px solid rgba(255,255,255,0.08);padding-left:48px;text-align:center;">
+            <div class="stat-val" style="font-size:22px;">guillermoandrada@gmail.com</div>
+            <div class="stat-lbl">Email</div>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:32px;font-size:13px;color:var(--white-30);">
+        Producto 100% argentino · No afiliado con Mercado Libre S.A.
+      </p>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ══ NAV ════════════════════════════════════════════════ -->
+<div id="nav">
+  <button id="btn-prev" onclick="go(-1)" disabled>←</button>
+  <span id="counter">1 / 13</span>
+  <button id="btn-next" onclick="go(1)">→</button>
+</div>
+
+<script>
+  const TOTAL = 13
+  let cur = 1
+
+  function go(dir) {
+    const prev = cur
+    cur = Math.max(1, Math.min(TOTAL, cur + dir))
+    if (cur === prev) return
+
+    const prevEl = document.getElementById('s' + prev)
+    const curEl  = document.getElementById('s' + cur)
+
+    prevEl.classList.remove('active')
+    prevEl.classList.add(dir > 0 ? 'prev' : '')
+    setTimeout(() => prevEl.classList.remove('prev'), 400)
+
+    curEl.classList.add('active')
+
+    document.getElementById('counter').textContent = cur + ' / ' + TOTAL
+    document.getElementById('slide-num').textContent = cur + ' / ' + TOTAL
+    document.getElementById('btn-prev').disabled = cur === 1
+    document.getElementById('btn-next').disabled = cur === TOTAL
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1) }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); go(-1) }
+    if (e.key === 'p' || e.key === 'P') window.print()
+  })
+
+  // Touch/swipe
+  let tx = 0
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX }, { passive: true })
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1)
+  }, { passive: true })
+</script>
+
+</body>
+</html>
