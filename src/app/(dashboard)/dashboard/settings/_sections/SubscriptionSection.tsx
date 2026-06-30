@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { api, ApiError } from '@/lib/api'
@@ -21,11 +20,11 @@ interface Plan {
   name: string
   priceARS: string | null
   isPublic: boolean
-  dailySummary: boolean
   alertByAmount: boolean
   dataExport: boolean
   closures: boolean
   outboundWebhooks: boolean
+  apiKeys: boolean
   maxMembers: number
   maxBusinesses: number
 }
@@ -38,134 +37,29 @@ const PLAN_FEATURES: Record<string, string[]> = {
   ],
   professional: [
     'Notificaciones en tiempo real',
-    'Historial 1 año completo',
+    'Historial 1 año',
     '2 comercios · hasta 6 miembros',
     'Alertas por monto mínimo',
     'Exportación CSV',
-    'Cierres diarios por email',
+    'Cierres por email (diario/semanal/mensual)',
+    'Webhooks salientes',
   ],
 }
 
-function PlanPicker({
-  currentSlug,
-  onSelect,
-  loading,
-  error,
-}: {
-  currentSlug: string
-  onSelect: (slug: string) => void
-  loading: boolean
-  error: string | null
-}) {
-  const [selected, setSelected] = useState(currentSlug === 'basic' ? 'basic' : 'business')
-
-  const { data: plansData, isLoading: plansLoading } = useQuery({
-    queryKey: ['public-plans'],
-    queryFn: () => api.get<{ data: Plan[] }>('/api/v1/plans').then((r) => r.data),
-    staleTime: 10 * 60 * 1000,
-  })
-
-  const plans = plansData ?? []
-
-  if (plansLoading) {
-    return (
-      <div className="flex items-center gap-2 py-4">
-        <Spinner size="sm" />
-        <span className="text-sm text-muted">Cargando planes...</span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {plans.filter((p) => p.isPublic).map((plan) => {
-          const isSelected = selected === plan.slug
-          const features = PLAN_FEATURES[plan.slug] ?? []
-          return (
-            <button
-              key={plan.slug}
-              onClick={() => setSelected(plan.slug)}
-              className={`rounded-xl border-2 p-4 text-left transition-all ${
-                isSelected
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border bg-card hover:border-primary/40'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{plan.name}</p>
-                  <p className="text-xs text-muted">
-                    {plan.priceARS !== null ? `$${Number(plan.priceARS).toLocaleString('es-AR')} / mes` : 'A medida'}
-                  </p>
-                </div>
-                <div
-                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                    isSelected ? 'border-primary bg-primary' : 'border-border'
-                  }`}
-                >
-                  {isSelected && (
-                    <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              {features.length > 0 && (
-                <ul className="mt-3 space-y-1">
-                  {features.map((f) => (
-                    <li key={f} className="flex items-center gap-1.5 text-xs text-muted">
-                      <svg className="h-3 w-3 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
-      <div className="flex justify-end">
-        <button
-          onClick={() => onSelect(selected)}
-          disabled={loading}
-          className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <Spinner size="sm" className="border-white" />
-              Redirigiendo...
-            </span>
-          ) : (
-            `Suscribirme al Plan ${plans.find((p) => p.slug === selected)?.name ?? selected}`
-          )}
-        </button>
-      </div>
-    </div>
-  )
-}
+const RECOMMENDED_SLUG = 'professional'
 
 export function SubscriptionSection() {
   const { businessId, role } = useActiveBusiness()
   const queryClient = useQueryClient()
   const isOwner = role === 'OWNER'
-  const [isStartingCheckout, setIsStartingCheckout] = useState(false)
+
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
-  const [showPlanPicker, setShowPlanPicker] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
 
-  const { data: subscription, isLoading } = useQuery({
+  const { data: subscription, isLoading: isLoadingSub } = useQuery({
     queryKey: ['subscription', businessId],
     queryFn: () =>
       api
@@ -174,9 +68,18 @@ export function SubscriptionSection() {
     enabled: !!businessId,
   })
 
-  async function handleActivate(planSlug: string) {
+  const { data: plansData, isLoading: isLoadingPlans } = useQuery({
+    queryKey: ['public-plans'],
+    queryFn: () => api.get<{ data: Plan[] }>('/api/v1/plans').then((r) => r.data),
+    staleTime: 10 * 60 * 1000,
+    enabled: !!businessId && isOwner,
+  })
+
+  const plans = (plansData ?? []).filter((p) => p.isPublic)
+
+  async function handleCheckout(planSlug: string) {
     if (!businessId || !subscription) return
-    setIsStartingCheckout(true)
+    setCheckoutLoading(planSlug)
     setCheckoutError(null)
     try {
       const res = await api.post<ApiResponse<{ checkoutUrl: string }>>(
@@ -185,9 +88,8 @@ export function SubscriptionSection() {
       )
       window.location.href = res.data.checkoutUrl
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Error al iniciar el proceso de pago.'
-      setCheckoutError(msg)
-      setIsStartingCheckout(false)
+      setCheckoutError(err instanceof ApiError ? err.message : 'Error al iniciar el proceso de pago.')
+      setCheckoutLoading(null)
     }
   }
 
@@ -206,123 +108,190 @@ export function SubscriptionSection() {
     }
   }
 
-  const needsPlanPicker = isOwner && subscription &&
-    ['TRIALING', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)
-
-  const needsPaymentUpdate = isOwner && subscription && subscription.status === 'PAST_DUE'
+  const isLoading = isLoadingSub || isLoadingPlans
 
   return (
-    <div id="suscripcion">
-      <Card>
-        <CardHeader>
-          <CardTitle>Suscripción</CardTitle>
-          <CardDescription>Estado y plan de tu comercio.</CardDescription>
-        </CardHeader>
+    <div id="suscripcion" className="space-y-5">
+      {/* Header de sección */}
+      <div className="border-b border-border pb-2">
+        <h2 className="text-base font-semibold text-foreground">Suscripción</h2>
+        <p className="text-xs text-muted">Estado actual y planes disponibles.</p>
+      </div>
 
-        {isLoading ? (
-          <div className="flex items-center gap-2 py-2">
-            <Spinner size="sm" />
-            <span className="text-sm text-muted">Cargando...</span>
-          </div>
-        ) : !subscription ? (
-          <p className="text-sm text-muted">No se pudo cargar la suscripción.</p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-foreground">{subscription.plan.name}</p>
-                <p className="text-xs text-muted">
-                  {subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
-                    ? subscription.plan.priceARS !== null
-                      ? `$${Number(subscription.plan.priceARS).toLocaleString('es-AR')} / mes`
-                      : 'Plan a medida'
-                    : subscription.status === 'TRIALING'
-                    ? `${subscription.plan.trialDays} días de prueba gratuita`
-                    : '—'}
-                </p>
-              </div>
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${SUBSCRIPTION_STATUS_COLORS[subscription.status]}`}>
-                {SUBSCRIPTION_STATUS_LABELS[subscription.status]}
-              </span>
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-4">
+          <Spinner size="sm" />
+          <span className="text-sm text-muted">Cargando...</span>
+        </div>
+      ) : !subscription ? (
+        <p className="text-sm text-muted">No se pudo cargar la suscripción.</p>
+      ) : (
+        <>
+          {/* Estado actual */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+            <div>
+              <p className="text-xs text-muted">Plan actual</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{subscription.plan.name}</p>
+              <p className="text-xs text-muted">
+                {subscription.status === 'TRIALING' && subscription.trialEndsAt
+                  ? daysUntil(subscription.trialEndsAt) > 0
+                    ? `Prueba gratuita — vence en ${daysUntil(subscription.trialEndsAt)} días (${formatDate(subscription.trialEndsAt)})`
+                    : 'Período de prueba finalizado'
+                  : subscription.status === 'ACTIVE'
+                  ? `Próxima renovación: ${formatDate(subscription.currentPeriodEnd)}`
+                  : subscription.status === 'CANCELLED' && subscription.cancelledAt
+                  ? `Cancelada el ${formatDate(subscription.cancelledAt)}`
+                  : ''}
+              </p>
             </div>
-
-            {subscription.status === 'TRIALING' && subscription.trialEndsAt && (
-              <p className="text-sm text-muted">
-                {daysUntil(subscription.trialEndsAt) > 0
-                  ? `Vence en ${daysUntil(subscription.trialEndsAt)} días — ${formatDate(subscription.trialEndsAt)}`
-                  : 'El período de prueba finalizó.'}
-              </p>
-            )}
-
-            {subscription.status === 'ACTIVE' && (
-              <p className="text-sm text-muted">
-                Próxima renovación: {formatDate(subscription.currentPeriodEnd)}
-              </p>
-            )}
-
-            {subscription.status === 'CANCELLED' && subscription.cancelledAt && (
-              <p className="text-sm text-muted">
-                Cancelada el {formatDate(subscription.cancelledAt)}
-              </p>
-            )}
-
-            {/* PAST_DUE — instrucción clara */}
-            {needsPaymentUpdate && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                <p className="text-sm font-semibold text-red-800">Pago rechazado por Mercado Pago</p>
-                <p className="mt-1 text-sm text-red-700">
-                  Mercado Pago reintentará el cobro automáticamente. Si el problema persiste,
-                  ingresá a{' '}
-                  <a
-                    href="https://www.mercadopago.com.ar/subscriptions"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline underline-offset-2"
-                  >
-                    mercadopago.com.ar/subscriptions
-                  </a>{' '}
-                  para verificar o actualizar tu método de pago.
-                </p>
-              </div>
-            )}
-
-            {/* Plan picker — se expande al hacer click en "Activar plan" */}
-            {needsPlanPicker && (
-              <>
-                {showPlanPicker ? (
-                  <PlanPicker
-                    currentSlug={subscription.plan.slug}
-                    onSelect={handleActivate}
-                    loading={isStartingCheckout}
-                    error={checkoutError}
-                  />
-                ) : (
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => setShowPlanPicker(true)}
-                      className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                    >
-                      {subscription.status === 'CANCELLED' ? 'Reactivar plan' : 'Activar plan'}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Cancelar — solo en ACTIVE */}
-            {isOwner && subscription.status === 'ACTIVE' && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  className="text-xs text-muted underline underline-offset-2 hover:text-red-600"
-                >
-                  Cancelar suscripción
-                </button>
-              </div>
-            )}
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${SUBSCRIPTION_STATUS_COLORS[subscription.status]}`}>
+              {SUBSCRIPTION_STATUS_LABELS[subscription.status]}
+            </span>
           </div>
-        )}
-      </Card>
+
+          {/* Aviso PAST_DUE */}
+          {subscription.status === 'PAST_DUE' && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-sm font-semibold text-red-800">Pago rechazado por Mercado Pago</p>
+              <p className="mt-1 text-sm text-red-700">
+                MP reintentará el cobro automáticamente. Si persiste, revisá tu método de pago en{' '}
+                <a
+                  href="https://www.mercadopago.com.ar/subscriptions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline underline-offset-2"
+                >
+                  mercadopago.com.ar/subscriptions
+                </a>.
+              </p>
+            </div>
+          )}
+
+          {/* Grilla de planes — solo OWNER */}
+          {isOwner && plans.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Planes disponibles</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {plans.map((plan) => {
+                  const isCurrent = plan.slug === subscription.plan.slug
+                  const isRecommended = plan.slug === RECOMMENDED_SLUG
+                  const features = PLAN_FEATURES[plan.slug] ?? []
+                  const canSwitch = !isCurrent && ['TRIALING', 'ACTIVE', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)
+                  const actionLabel = isCurrent
+                    ? null
+                    : subscription.status === 'ACTIVE'
+                    ? `Cambiar a ${plan.name}`
+                    : `Activar ${plan.name}`
+
+                  return (
+                    <div
+                      key={plan.slug}
+                      className={`relative flex flex-col rounded-xl border-2 p-4 transition-colors ${
+                        isCurrent
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-card'
+                      }`}
+                    >
+                      {/* Badges */}
+                      <div className="mb-2 flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">{plan.name}</p>
+                        {isCurrent && (
+                          <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                            Actual
+                          </span>
+                        )}
+                        {isRecommended && !isCurrent && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                            Recomendado
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm font-semibold text-primary">
+                        {plan.priceARS !== null
+                          ? `$${Number(plan.priceARS).toLocaleString('es-AR')} / mes`
+                          : 'A medida'}
+                      </p>
+
+                      {features.length > 0 && (
+                        <ul className="mt-3 flex-1 space-y-1.5">
+                          {features.map((f) => (
+                            <li key={f} className="flex items-start gap-1.5 text-xs text-muted">
+                              <svg className="mt-px h-3 w-3 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {canSwitch && actionLabel && (
+                        <button
+                          onClick={() => handleCheckout(plan.slug)}
+                          disabled={checkoutLoading !== null}
+                          className="mt-4 w-full rounded-lg border border-primary bg-white px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white disabled:opacity-50"
+                        >
+                          {checkoutLoading === plan.slug ? (
+                            <span className="flex items-center justify-center gap-1.5">
+                              <Spinner size="sm" />
+                              Redirigiendo...
+                            </span>
+                          ) : (
+                            actionLabel
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Enterprise — siempre al final */}
+                <div className="flex flex-col rounded-xl border-2 border-border bg-card p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground">Enterprise</p>
+                  </div>
+                  <p className="text-sm font-semibold text-muted">A medida</p>
+                  <ul className="mt-3 flex-1 space-y-1.5">
+                    {['Comercios y miembros ilimitados', 'API Keys', 'Webhooks salientes', 'Soporte prioritario'].map((f) => (
+                      <li key={f} className="flex items-start gap-1.5 text-xs text-muted">
+                        <svg className="mt-px h-3 w-3 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href="mailto:soporte@pay-alert.com.ar?subject=Consulta%20Enterprise"
+                    className="mt-4 w-full rounded-lg border border-border px-3 py-1.5 text-center text-xs font-semibold text-muted transition-colors hover:border-primary hover:text-primary"
+                  >
+                    Contactar →
+                  </a>
+                </div>
+              </div>
+
+              {checkoutError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {checkoutError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Cancelar suscripción — solo ACTIVE, al fondo */}
+          {isOwner && subscription.status === 'ACTIVE' && (
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="text-xs text-muted underline underline-offset-2 hover:text-red-600"
+              >
+                Cancelar suscripción
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       {showCancelConfirm && subscription && (
         <ConfirmDialog
