@@ -46,14 +46,16 @@ export async function generateInvoicePdf(invoice: InvoiceData): Promise<void> {
   // Gancho superior
   doc.roundedRect(bx - 1, by - 8, 2, 2, 0.6, 0.6, 'F')
 
-  // Cuerpo — path simétrico: parte del top-center, lado izquierdo, base, lado derecho
+  // Cuerpo — domo convexo (aprox. cuarto de elipse, constante kappa 0.5523), simétrico:
+  // parte del top-center, lado derecho, base, lado izquierdo (bezier del izquierdo = la del
+  // derecho invertida en dirección, con los puntos de control intercambiados — no solo espejada)
   doc.lines(
     [
-      [0, 4, -2, 8, -4, 8],    // lado izquierdo: baja recto, luego curva hacia afuera
-      [-1.5, 0.5],              // vuelo izquierdo
-      [11, 0],                  // base plana
-      [-1.5, -0.5],             // vuelo derecho
-      [0, -4, -2, -8, -4, -8], // lado derecho: simétrico al izquierdo
+      [2.2, 0, 4, 3.6, 4, 8],       // lado derecho: domo convexo
+      [1.5, 0.5],                    // vuelo derecho
+      [-11, 0],                      // base plana
+      [1.5, -0.5],                   // vuelo izquierdo
+      [0, -4.4, 1.8, -8, 4, -8],    // lado izquierdo: domo convexo, espejo exacto del derecho
     ],
     bx,
     by - 6,
