@@ -109,6 +109,12 @@ document.body.removeChild(a)
 
 **XLSX:** usa `<a href="data:..." download>` renderizado en el DOM — el usuario clickea el `<a>` directamente. `buildXlsxDataUrl` está en `src/lib/export-payments.ts`.
 
+### jsPDF — íconos dibujados a mano con `doc.lines()`
+
+`src/lib/invoice-pdf.ts` dibuja el logo (campana) del comprobante con primitivas vectoriales jsPDF (`doc.lines()`, `doc.circle()`, `doc.roundedRect()`), no con texto/emoji — un emoji vía `doc.text()` se rompe porque las fuentes core de jsPDF solo soportan WinAnsi (Latin-1), y renderiza como texto corrupto (histórico: commits `fe4f502`/`4577b91`).
+
+**Gotcha de simetría bezier:** en un path de `doc.lines()`, si dos curvas consecutivas deben ser espejo exacto una de la otra (ej. lado izquierdo/derecho de una forma), no alcanza con negar el signo de x en los puntos de control — cada curva recorre el path en dirección opuesta, así que también hay que intercambiar el orden de los puntos de control (`cp1`↔`cp2`). Negar solo el signo produce una forma asimétrica/deformada que a tamaño reducido puede confundirse con un bug de encoding. Ver el comentario en el bloque de la campana para el cálculo correcto (domo convexo, aprox. cuarto de elipse con constante kappa 0.5523).
+
 ### `useSyncExternalStore` para leer `localStorage` en componentes
 
 `useState(() => localStorage.getItem(key))` en el initializer causa hydration mismatch (error React #418): el servidor no tiene localStorage → retorna `null`/`false`, el cliente retorna el valor real → React detecta diferencia y los event handlers pueden quedar rotos.
