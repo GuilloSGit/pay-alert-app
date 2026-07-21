@@ -238,6 +238,7 @@ const PLANS = [
       'Usuarios ilimitados',
       'Historial completo',
       'Webhooks salientes',
+      'Onboarding de clientes vía integración partner',
       'SLA por contrato',
       'Soporte 24/7',
     ],
