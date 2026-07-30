@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Developers — Pay Alert',
-  description: 'Documentación para integrar Pay Alert en tu sistema. Webhooks salientes, verificación de firmas HMAC y referencia de la API.',
+  description: 'Documentación para integrar Pay Alert en tu sistema. Webhooks salientes, API Keys, pagos esperados y verificación de firmas HMAC.',
 }
 
 function LogoIcon({ size = 28 }: { size?: number }) {
@@ -172,6 +172,59 @@ const CURL_REGEN = `curl -X PUT https://pay-alert-api.onrender.com/api/v1/busine
   -H "Content-Type: application/json" \\
   -d '{ "regenerateSecret": true }'`
 
+const CURL_CREATE_KEY = `curl -X POST https://pay-alert-api.onrender.com/api/v1/businesses/{businessId}/api-keys \\
+  -H "Authorization: Bearer <tu-access-token>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Integración ERP",
+    "expiresAt": "2027-01-01T00:00:00.000Z"
+  }'`
+
+const CURL_LIST_KEYS = `curl https://pay-alert-api.onrender.com/api/v1/businesses/{businessId}/api-keys \\
+  -H "Authorization: Bearer <tu-access-token>"`
+
+const CURL_REVOKE_KEY = `curl -X DELETE https://pay-alert-api.onrender.com/api/v1/businesses/{businessId}/api-keys/{keyId} \\
+  -H "Authorization: Bearer <tu-access-token>"`
+
+const CURL_CREATE_EXPECTED = `curl -X POST https://pay-alert-api.onrender.com/api/v1/businesses/{businessId}/expected-payments \\
+  -H "Authorization: Bearer pa_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "externalReference": "factura-4521",
+    "amount": 15000,
+    "expiresAt": "2026-07-25T00:00:00.000Z"
+  }'`
+
+const CURL_GET_EXPECTED = `curl https://pay-alert-api.onrender.com/api/v1/businesses/{businessId}/expected-payments/factura-4521 \\
+  -H "Authorization: Bearer pa_live_..."`
+
+const CURL_CANCEL_EXPECTED = `curl -X DELETE https://pay-alert-api.onrender.com/api/v1/businesses/{businessId}/expected-payments/factura-4521 \\
+  -H "Authorization: Bearer pa_live_..."`
+
+const EXPECTED_PAYMENT_RESPONSE = `{
+  "data": {
+    "id": "cmpz1a2b30001y5abcd12345",
+    "externalReference": "factura-4521",
+    "amount": "15000.00",
+    "status": "MATCHED",
+    "expiresAt": "2026-07-25T00:00:00.000Z",
+    "createdAt": "2026-07-20T18:04:11.000Z",
+    "payment": {
+      "id": "cmpx9k2ab0001y5wnabc12345",
+      "mpPaymentId": "123456789",
+      "amount": "15000.00",
+      "currency": "ARS",
+      "status": "APPROVED",
+      "description": "Producto XYZ",
+      "payerEmail": null,
+      "payerName": "Juan García",
+      "paymentMethod": "account_money",
+      "paidAt": "2026-07-20T18:05:02.000Z",
+      "receivedAt": "2026-07-20T18:05:03.000Z"
+    }
+  }
+}`
+
 export default function DevelopersPage() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -186,7 +239,7 @@ export default function DevelopersPage() {
           </Link>
           <div className="flex items-center gap-4">
             <a href="#webhooks" className="hidden text-sm text-muted transition-colors hover:text-foreground sm:block">Webhooks</a>
-            <a href="#payload" className="hidden text-sm text-muted transition-colors hover:text-foreground sm:block">Payload</a>
+            <a href="#api-keys" className="hidden text-sm text-muted transition-colors hover:text-foreground sm:block">API Keys</a>
             <a href="#api" className="hidden text-sm text-muted transition-colors hover:text-foreground sm:block">API</a>
             <Link href="/login" className="rounded-lg border border-border px-4 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface">
               Iniciar sesión
@@ -224,6 +277,8 @@ export default function DevelopersPage() {
                 ['#payload', 'Referencia del payload'],
                 ['#events', 'Eventos disponibles'],
                 ['#api', 'Gestionar webhooks via API'],
+                ['#api-keys', 'API Keys'],
+                ['#expected-payments', 'Pagos esperados'],
               ].map(([href, label]) => (
                 <a key={href} href={href} className="transition-colors hover:text-foreground">{label}</a>
               ))}
@@ -419,6 +474,141 @@ export default function DevelopersPage() {
             </div>
           </section>
 
+          {/* API Keys */}
+          <section id="api-keys">
+            <div className="mb-2 flex items-center gap-2">
+              <SectionLabel>Autenticación server-to-server</SectionLabel>
+              <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Enterprise</span>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">API Keys</h2>
+            <p className="mb-6 text-base text-muted">
+              Para llamar a la API desde tu backend sin un usuario logueado (por ejemplo, para registrar pagos esperados),
+              usá una API key en lugar de un JWT. Solo el rol <Tag>OWNER</Tag> puede crearlas o revocarlas, y siempre
+              vía tu access token — las keys no pueden gestionarse con otra key.
+            </p>
+
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <strong>El valor crudo de la key se muestra una sola vez</strong>, en la respuesta de creación. Guardalo de
+              forma segura — si lo perdés, tenés que revocar la key y crear una nueva. Máximo 10 keys activas por comercio.
+            </div>
+
+            <div className="space-y-10">
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <Method method="POST" />
+                  <code className="font-mono text-sm text-foreground">/api/v1/businesses/{'{businessId}'}/api-keys</code>
+                </div>
+                <p className="mb-3 text-sm text-muted">
+                  Crea una API key. Devuelve <code className="font-mono text-xs">key</code> (formato <code className="font-mono text-xs">pa_live_...</code>) solo en este response.
+                </p>
+                <Code>{CURL_CREATE_KEY}</Code>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <Method method="GET" />
+                  <code className="font-mono text-sm text-foreground">/api/v1/businesses/{'{businessId}'}/api-keys</code>
+                </div>
+                <p className="mb-3 text-sm text-muted">Lista las keys activas del comercio (sin el valor crudo).</p>
+                <Code>{CURL_LIST_KEYS}</Code>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <Method method="DELETE" />
+                  <code className="font-mono text-sm text-foreground">/api/v1/businesses/{'{businessId}'}/api-keys/{'{keyId}'}</code>
+                </div>
+                <p className="mb-3 text-sm text-muted">Revoca una key de forma inmediata para nuevos requests. Por caché, una key ya revocada puede seguir aceptándose hasta 5 minutos.</p>
+                <Code>{CURL_REVOKE_KEY}</Code>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-xl border border-border bg-background p-5">
+              <p className="mb-2 text-sm font-semibold text-foreground">Usar la key en tus requests</p>
+              <p className="text-sm leading-relaxed text-muted">
+                Mandala como <code className="font-mono text-xs">Authorization: Bearer pa_live_...</code> o como header{' '}
+                <code className="font-mono text-xs">x-api-key: pa_live_...</code>. Los endpoints que aceptan API key
+                también aceptan JWT — usá lo que tenga sentido según si hay o no un usuario logueado del lado que llama.
+                Límite: 300 requests/minuto por key.
+              </p>
+            </div>
+          </section>
+
+          {/* Pagos esperados */}
+          <section id="expected-payments">
+            <div className="mb-2 flex items-center gap-2">
+              <SectionLabel>Transferencias y pagos fuera de Mercado Pago</SectionLabel>
+              <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Enterprise</span>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Pagos esperados</h2>
+            <p className="mb-6 text-base text-muted">
+              Registrá de antemano un pago que esperás recibir (típicamente una transferencia) con una referencia propia
+              y un monto. Cuando Pay Alert detecta un pago que matchea, lo vincula automáticamente — vos solo consultás
+              el estado. Auth: JWT o <Tag>API Key</Tag>.
+            </p>
+
+            <div className="space-y-10">
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <Method method="POST" />
+                  <code className="font-mono text-sm text-foreground">/api/v1/businesses/{'{businessId}'}/expected-payments</code>
+                </div>
+                <p className="mb-3 text-sm text-muted">
+                  Crea un pago esperado. <code className="font-mono text-xs">externalReference</code> es tu propio identificador
+                  (ej: número de factura) y es de un solo uso por comercio — no se puede reutilizar aunque el pago original
+                  haya expirado o se haya cancelado. <code className="font-mono text-xs">expiresAt</code> es opcional.
+                </p>
+                <Code>{CURL_CREATE_EXPECTED}</Code>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <Method method="GET" />
+                  <code className="font-mono text-sm text-foreground">/api/v1/businesses/{'{businessId}'}/expected-payments/{'{externalReference}'}</code>
+                </div>
+                <p className="mb-3 text-sm text-muted">
+                  Consulta el estado. Si pasó <code className="font-mono text-xs">expiresAt</code> sin match, el estado
+                  se resuelve a <code className="font-mono text-xs">EXPIRED</code> automáticamente. Cuando el estado es{' '}
+                  <code className="font-mono text-xs">MATCHED</code>, incluye el pago vinculado en <code className="font-mono text-xs">data.payment</code>.
+                </p>
+                <Code>{CURL_GET_EXPECTED}</Code>
+                <div className="mt-4">
+                  <Code>{EXPECTED_PAYMENT_RESPONSE}</Code>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <Method method="DELETE" />
+                  <code className="font-mono text-sm text-foreground">/api/v1/businesses/{'{businessId}'}/expected-payments/{'{externalReference}'}</code>
+                </div>
+                <p className="mb-3 text-sm text-muted">
+                  Cancela un pago esperado. Solo funciona mientras sigue <code className="font-mono text-xs">PENDING</code> —
+                  si ya fue matcheado, expiró, o ya está cancelado, devuelve error.
+                </p>
+                <Code>{CURL_CANCEL_EXPECTED}</Code>
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h3 className="mb-1.5 font-semibold text-foreground">Estados posibles</h3>
+                <p className="text-sm leading-relaxed text-muted">
+                  <code className="font-mono text-xs">PENDING</code> → <code className="font-mono text-xs">MATCHED</code>,{' '}
+                  <code className="font-mono text-xs">EXPIRED</code> o <code className="font-mono text-xs">CANCELLED</code>.
+                  Son estados terminales — un pago esperado nunca vuelve a <code className="font-mono text-xs">PENDING</code>.
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h3 className="mb-1.5 font-semibold text-foreground">Cómo matchea</h3>
+                <p className="text-sm leading-relaxed text-muted">
+                  Se vincula automáticamente solo si hay exactamente un pago esperado <code className="font-mono text-xs">PENDING</code> vigente
+                  con el mismo monto (tolerancia ±0.01). Si hay ambigüedad, no matchea nada — consultá por polling o usá un webhook para enterarte.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Buenas prácticas */}
           <section>
             <SectionLabel>Buenas prácticas</SectionLabel>
@@ -448,6 +638,17 @@ export default function DevelopersPage() {
                 </div>
               ))}
             </div>
+          </section>
+
+          {/* Integraciones a escala */}
+          <section className="rounded-2xl border border-primary/20 bg-primary-light/40 p-8">
+            <SectionLabel>Para plataformas</SectionLabel>
+            <h2 className="mb-2 text-xl font-bold text-foreground">¿Tu software gestiona el negocio de otros comercios?</h2>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted">
+              Si desarrollás un ERP, POS o sistema de gestión y necesitás que tus clientes tengan Pay Alert activo sin
+              pasar por nuestra UI, nuestra arquitectura ya está preparada para ese tipo de integración a nivel de
+              plataforma. Escribinos y lo evaluamos juntos.
+            </p>
           </section>
 
           {/* CTA */}

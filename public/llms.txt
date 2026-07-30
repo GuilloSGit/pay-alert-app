@@ -1,0 +1,17 @@
+# Pay Alert
+
+> Pay Alert notifica en tiempo real cuando un comercio recibe un pago por Mercado Pago, verificando la confirmación directamente contra Mercado Pago (no contra comprobantes que el cliente puede falsificar). Producto argentino, no afiliado con Mercado Libre S.A.
+
+Pay Alert conecta la cuenta de Mercado Pago de un comercio y envía alertas push/WhatsApp/webhook al equipo de trabajo apenas se acredita un pago, sin darle a ese equipo acceso a las credenciales ni al dinero de la cuenta de Mercado Pago. Resuelve el problema de comprobantes de transferencia o pago falsificados que empleados no pueden distinguir de uno real a simple vista.
+
+## Producto
+
+- [Landing](https://pay-alert.com.ar/): propuesta de valor, características, precios y cómo funciona.
+- [Planes y precios](https://pay-alert.com.ar/suscribirse): planes disponibles (Básico, Profesional, Enterprise) y su alcance.
+- [Documentación para developers](https://pay-alert.com.ar/developers): API de pagos esperados (transferencias), webhooks salientes firmados con HMAC-SHA256, integración para partners/software de gestión.
+
+## Datos clave
+
+- Integración: exclusivamente Mercado Pago (Argentina).
+- Roles de acceso: Owner, Admin, Member, Observer — permisos granulares por comercio, sin exponer la cuenta de Mercado Pago al equipo.
+- Contacto: soporte@pay-alert.com.ar

@@ -249,9 +249,41 @@ const PLANS = [
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      name: 'Pay Alert',
+      url: 'https://pay-alert.com.ar',
+      logo: 'https://pay-alert.com.ar/icons/icon-512.png',
+      email: 'soporte@pay-alert.com.ar',
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: 'Pay Alert',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      description:
+        'Notificaciones en tiempo real de pagos recibidos por Mercado Pago, verificadas directamente contra Mercado Pago para evitar comprobantes falsos.',
+      url: 'https://pay-alert.com.ar',
+      offers: {
+        '@type': 'AggregateOffer',
+        priceCurrency: 'ARS',
+        offerCount: 3,
+        url: 'https://pay-alert.com.ar/suscribirse',
+      },
+    },
+  ],
+}
+
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-sm">
