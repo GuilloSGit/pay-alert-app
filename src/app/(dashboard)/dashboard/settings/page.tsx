@@ -17,6 +17,7 @@ import { SecuritySection } from './_sections/SecuritySection'
 import { DevicesSection } from './_sections/DevicesSection'
 import { QuietHoursSection } from './_sections/QuietHoursSection'
 import { RolesSection } from './_sections/RolesSection'
+import { ApiKeysSection } from './_sections/ApiKeysSection'
 
 export default function SettingsPage() {
   const { role, businessId } = useActiveBusiness()
@@ -60,6 +61,7 @@ export default function SettingsPage() {
 
             <MpConnectSection />
             <SubscriptionSection />
+            <ApiKeysSection />
           </>
         )}
 

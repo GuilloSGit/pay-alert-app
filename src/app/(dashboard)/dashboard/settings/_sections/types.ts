@@ -25,6 +25,17 @@ export const PLATFORM_LABELS: Record<Device['platform'], string> = {
   web: 'Web',
 }
 
+// ─── API Key ──────────────────────────────────────────────────────────────────
+
+export interface ApiKeySummary {
+  id: string
+  name: string
+  prefix: string
+  expiresAt: string | null
+  lastUsedAt: string | null
+  createdAt: string
+}
+
 // ─── Conexión MP ──────────────────────────────────────────────────────────────
 
 export interface MpConnection {
