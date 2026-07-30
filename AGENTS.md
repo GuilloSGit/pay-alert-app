@@ -109,6 +109,27 @@ document.body.removeChild(a)
 
 **XLSX:** usa `<a href="data:..." download>` renderizado en el DOM — el usuario clickea el `<a>` directamente. `buildXlsxDataUrl` está en `src/lib/export-payments.ts`.
 
+### Copiar al portapapeles — siempre con fallback
+
+`navigator.clipboard.writeText()` puede rechazar silenciosamente (permiso denegado, contexto no seguro, o gesto de usuario no reconocido como "trusted" — visto en automatización con Puppeteer, aunque en un click real de usuario normalmente funciona). Sin `try/catch`, el botón "Copiar" no da ningún feedback y el usuario no sabe si funcionó. Patrón usado en `ApiKeysSection.tsx` (modal de reveal-once de la API key):
+
+```ts
+try {
+  await navigator.clipboard.writeText(value)
+  setCopied(true)
+} catch {
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  try { setCopied(document.execCommand('copy')) }
+  finally { document.body.removeChild(textarea) }
+}
+```
+
 ### jsPDF — íconos dibujados a mano con `doc.lines()`
 
 `src/lib/invoice-pdf.ts` dibuja el logo (campana) del comprobante con primitivas vectoriales jsPDF (`doc.lines()`, `doc.circle()`, `doc.roundedRect()`), no con texto/emoji — un emoji vía `doc.text()` se rompe porque las fuentes core de jsPDF solo soportan WinAnsi (Latin-1), y renderiza como texto corrupto (histórico: commits `fe4f502`/`4577b91`).
@@ -218,6 +239,7 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `EmptyState` | `size?: 'sm'\|'default'`, `icon`, `title`, `description`, `className` | — |
 | `SlideOver` | `title`, `subtitle`, `subtitleClassName`, `onClose`, `children` | panel fixed right |
 | `ConfirmDialog` | `iconBgClass`, `confirmClassName`, `pendingLabel`, `closeOnBackdrop`, `description: ReactNode` | description es div (admite strong) |
+| `ApiKeysSection` (`settings/_sections/`) | — | Solo OWNER. Lista + crear (modal reveal-once del raw) + revocar. Copiar al portapapeles con fallback `document.execCommand('copy')` si `navigator.clipboard.writeText` falla (permisos/contexto no seguro) — ver patrón abajo. |
 | `StatCard` | `title`, `isLoading`, `caption`, `children` | skeleton animado cuando isLoading |
 | `PaymentToast` / `PaymentToastContainer` | — | stack bottom-right, max 3, auto-dismiss 5s, sonido |
 | `BugReportModal` | `onClose` | **Siempre usar `createPortal → document.body`** — el `translate-x-0` del sidebar crea stacking context y confina `position:fixed`. Campos: severidad, descripción, frecuencia, pasos, expected, adjuntos. Combina en `steps` al enviar. |
@@ -255,7 +277,7 @@ Git no trackea directorios vacíos. Mantener `public/.gitkeep` siempre en el rep
 | `/dashboard/payments` | `src/app/(dashboard)/dashboard/payments/page.tsx` | ✅ Tabla, filtros, detalle, AFIP |
 | `/dashboard/businesses` | `src/app/(dashboard)/dashboard/businesses/page.tsx` | ✅ Info comercio, MP (OAuth), suscripción. Rubro: select 11 categorías. Form APP_USR- eliminado — solo OAuth. |
 | `/dashboard/members` | `src/app/(dashboard)/dashboard/members/page.tsx` | ✅ Tabla miembros + invitaciones + roles + revocar |
-| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + Seguridad + Dispositivos + MP Connect + Suscripción. Banner "Asistente de configuración" → /onboarding |
+| `/dashboard/settings` | `src/app/(dashboard)/dashboard/settings/page.tsx` | ✅ Perfil + Seguridad + Dispositivos + MP Connect + Suscripción + API Keys (solo OWNER, Enterprise). Banner "Asistente de configuración" → /onboarding |
 | `/dashboard/facturacion` | `src/app/(dashboard)/dashboard/facturacion/page.tsx` | ✅ OWNER only. Historial invoices paginado. Descarga PDF con `src/lib/invoice-pdf.ts` (jsPDF dinámico). |
 | `/dashboard/cierres` | `src/app/(dashboard)/dashboard/cierres/page.tsx` | ✅ Tabla cierres con blur-gate por plan |
 | `/invitations/[token]` | `src/app/(auth)/invitations/[token]/page.tsx` | ✅ OTP + registro inline |
@@ -532,9 +554,15 @@ Repo separado, deploy en `admin.pay-alert.com.ar` (Vercel — DNS gestionado por
 
 ### ✅ Completado (2026-06-18 — sesión 15) — Página /developers
 - `src/app/developers/page.tsx` — Server Component público (sin auth)
-- Contenido: flujo 3 pasos, HMAC-SHA256 verification (Node.js + Python + PHP), referencia payload, tabla eventos, ejemplos curl, buenas prácticas, CTA.
-- **Gotcha proxy:** toda ruta nueva pública (sin auth) debe agregarse a `PUBLIC_PATHS` en `src/proxy.ts`. Sin esto el middleware redirige a `/login` para usuarios sin sesión. `/developers` ya está en la lista.
+- Contenido: flujo 3 pasos, HMAC-SHA256 verification (Node.js + Python + PHP), referencia payload, tabla eventos, ejemplos curl, buenas prácticas, CTA, sección API Keys (curl create/list/revoke).
+- **Gotcha proxy — `PUBLIC_PATHS` vs `OPEN_PATHS`:** `PUBLIC_PATHS` en `src/proxy.ts` es solo para páginas de auth (login/register) — con sesión activa redirige a `/dashboard`. `OPEN_PATHS` es accesible con o sin sesión, sin redirect en ningún sentido. `/developers` está en `OPEN_PATHS` (no en `PUBLIC_PATHS`): un OWNER logueado que quiere copiar un curl de la doc mientras integra webhooks no debe ser expulsado al dashboard.
 - Landing: link "Developers" en nav principal + columna "Developers" en footer.
+
+### ✅ SEO / AEO — discoverability (2026-07-30)
+- `src/app/robots.ts`: permite crawlers de IA además de buscadores tradicionales (`GPTBot`, `ChatGPT-User`, `ClaudeBot`, `anthropic-ai`, `PerplexityBot`, `Google-Extended`, etc.). Disallow de rutas privadas (`/dashboard`, `/login`, auth, `/api`).
+- `src/app/sitemap.ts`: `/`, `/suscribirse`, `/developers`.
+- `public/llms.txt`: resumen del producto en Markdown para agentes LLM (convención `llmstxt.org`) — landing, planes, developers docs, roles, contacto.
+- `src/app/page.tsx`: JSON-LD (`Organization` + `SoftwareApplication`) inyectado con `<script type="application/ld+json">`.
 
 ### ✅ Completado (2026-06-17 — sesión 11) — Reporte de bugs / Nosotros
 - `BugReportModal` + botón en Sidebar sobre "Cerrar sesión"
