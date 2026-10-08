@@ -6,9 +6,9 @@ Pay Alert conecta la cuenta de Mercado Pago de un comercio y envía alertas push
 
 ## Producto
 
-- [Landing](https://pay-alert.com.ar/): propuesta de valor, características, precios y cómo funciona.
-- [Planes y precios](https://pay-alert.com.ar/suscribirse): planes disponibles (Básico, Profesional, Enterprise) y su alcance.
-- [Documentación para developers](https://pay-alert.com.ar/developers): API de pagos esperados (transferencias), webhooks salientes firmados con HMAC-SHA256, integración para partners/software de gestión.
+- [Landing](https://www.pay-alert.com.ar/): propuesta de valor, características, precios y cómo funciona.
+- [Planes y precios](https://www.pay-alert.com.ar/suscribirse): planes disponibles (Básico, Profesional, Enterprise) y su alcance.
+- [Documentación para developers](https://www.pay-alert.com.ar/developers): API de pagos esperados (transferencias), webhooks salientes firmados con HMAC-SHA256, integración para partners/software de gestión.
 
 ## Datos clave
 

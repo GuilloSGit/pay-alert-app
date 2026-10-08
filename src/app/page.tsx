@@ -255,8 +255,8 @@ const JSON_LD = {
     {
       '@type': 'Organization',
       name: 'Pay Alert',
-      url: 'https://pay-alert.com.ar',
-      logo: 'https://pay-alert.com.ar/icons/icon-512.png',
+      url: 'https://www.pay-alert.com.ar',
+      logo: 'https://www.pay-alert.com.ar/icons/icon-512.png',
       email: 'soporte@pay-alert.com.ar',
     },
     {
@@ -266,12 +266,12 @@ const JSON_LD = {
       operatingSystem: 'Web',
       description:
         'Notificaciones en tiempo real de pagos recibidos por Mercado Pago, verificadas directamente contra Mercado Pago para evitar comprobantes falsos.',
-      url: 'https://pay-alert.com.ar',
+      url: 'https://www.pay-alert.com.ar',
       offers: {
         '@type': 'AggregateOffer',
         priceCurrency: 'ARS',
         offerCount: 3,
-        url: 'https://pay-alert.com.ar/suscribirse',
+        url: 'https://www.pay-alert.com.ar/suscribirse',
       },
     },
   ],

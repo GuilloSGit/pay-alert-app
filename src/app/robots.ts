@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const BASE_URL = 'https://pay-alert.com.ar'
+const BASE_URL = 'https://www.pay-alert.com.ar'
 
 const DISALLOW = [
   '/dashboard',
