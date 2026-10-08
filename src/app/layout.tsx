@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   },
   description:
     'Recibí confirmaciones reales de pagos de Mercado Pago en menos de 15 segundos. Tu equipo ve las alertas que vos querés, sin acceso a tu cuenta.',
-  metadataBase: new URL('https://pay-alert.com.ar'),
+  metadataBase: new URL('https://www.pay-alert.com.ar'),
   openGraph: {
     siteName: 'Pay Alert',
     locale: 'es_AR',

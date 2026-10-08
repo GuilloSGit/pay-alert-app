@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'edge'
 export const alt = 'Pay Alert — Confirmación de Pago Instantánea'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
@@ -232,9 +231,9 @@ export default function OGImage() {
                         justifyContent: 'center',
                       }}
                     >
-                      <span style={{ color: 'white', fontSize: 9, fontWeight: 800 }}>
-                        ✓
-                      </span>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </div>
                     <span style={{ fontSize: 10, color: '#34d399', fontWeight: 600 }}>
                       Confirmado por MP
@@ -274,7 +273,9 @@ export default function OGImage() {
                       justifyContent: 'center',
                     }}
                   >
-                    <span style={{ color: '#059669', fontSize: 9 }}>✓</span>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12.5l4.5 4.5L19 7.5" stroke="#059669" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </div>
                 </div>
 

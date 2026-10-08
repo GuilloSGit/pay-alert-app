@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: 'Pay Alert — Nunca más confíes en comprobantes falsos',
     description:
       'Recibí confirmaciones reales de Mercado Pago en segundos. Tu equipo ve las alertas que vos querés, sin acceso a tu cuenta.',
-    url: 'https://pay-alert.com.ar',
+    url: 'https://www.pay-alert.com.ar',
     type: 'website',
   },
 }
